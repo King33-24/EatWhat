@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+ENV/
+
+# Node (避免 Copilot 误装)
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 项目运行期数据(整个 data 目录都不传)
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# 演示视频(太大,只放夸克网盘)
+demo/*.mp4
+demo/*.mov
+demo/*.avi
+
+# 环境变量与密钥(绝对不能传!)
+.env
+.env.local
+*.key
+config/secrets.*
+gemini_key.txt
+
+# 浏览器扩展生成物
+extension/.web-extension-id
+extension/*.crx
+extension/*.zip
+
+# 编辑器与 IDE
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 日志(loguru 文件输出)
+*.log
+logs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# 测试与覆盖率
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# 系统文件
+*.pid
+*.lock
+
+# Claude Code 的会话存档(如有)
+.claude/
+
+# 备份文件
+*.bak
+*.orig

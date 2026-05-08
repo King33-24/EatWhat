@@ -1,0 +1,113 @@
+# 认知棱镜 Prism
+
+> **面墙而立，破壁而观** — 一个不推送、不说教、不替你思考的认知健康智能体
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![Status](https://img.shields.io/badge/status-WIP-orange) ![Track](https://img.shields.io/badge/赛道-智能体应用-blue)
+
+---
+
+## 简介
+
+Prism 通过审视用户在 B 站的数字足迹，帮 TA 看见信息茧房之外的世界，重新掌握深度思考的主动权。它从不替用户做决定，只做三件事——**呈现、追问、邀请**。
+
+三个 MVP 功能：
+- **认知体检报告**：兴趣地图 + 观点光谱 + 思维盲区 + 情绪共鸣
+- **平行书架**：基于盲区匹配理性、对立视角的内容源
+- **冷静期盒子**：把"低质上瘾"链接锁定 7 天
+
+## 项目状态
+
+- 开发中 🚧
+- 初赛截止：**2026-05-24 24:00**
+- 比赛赛道：智能体应用（基于 OpenClaw 框架）
+- 团队：2 名计算机大一学生
+
+## 技术栈
+
+- **Agent 主体**：[OpenClaw](https://github.com/openclaw/openclaw)
+- **大模型**：Gemini 3 Flash（通过 Google AI Studio 免费 API）
+- **后端**：FastAPI + SQLAlchemy + SQLite
+- **Web Dashboard**：HTML + HTMX + Tailwind + DaisyUI + ECharts（**全 CDN，无构建工具**）
+- **浏览器扩展**：Manifest V3，原生 JS
+- **运行环境**：Ubuntu 24.04 LTS（VMware Player）
+
+## 快速开始
+
+> ⚠️ 本项目目前还在 W1 骨架阶段，下面的指令到 W1 末才能跑通。
+
+### 前置依赖
+
+- Ubuntu 24.04 LTS
+- Python 3.12
+- Google Chrome
+- Gemini API Key（[这里申请](https://aistudio.google.com/app/apikey)）
+
+### 后端
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export GEMINI_API_KEY=你的key
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+打开 <http://localhost:8000> 看到 `Prism Backend OK`。
+
+### 浏览器扩展
+
+1. Chrome 打开 `chrome://extensions/`
+2. 右上角「开发者模式」
+3. 点「加载已解压的扩展程序」选 `extension/` 文件夹
+4. 打开 B 站视频页 → 点扩展图标 → 采集
+
+### OpenClaw
+
+参考 [OpenClaw 官方仓库](https://github.com/openclaw/openclaw)安装。
+
+## 目录结构
+
+```
+project/
+├── backend/                # FastAPI 后端
+├── frontend/               # Web Dashboard (HTML/HTMX)
+├── extension/              # 浏览器扩展 (Manifest V3)
+├── openclaw_workspace/     # OpenClaw Agent + Skills
+├── data/                   # 运行期数据（gitignore）
+├── demo/                   # 演示物料
+├── docs/                   # 项目文档
+│   ├── api.md              # 接口契约 ⭐ 前后端必读
+│   └── design/             # 设计文档与历史归档
+│       ├── ver2.md         # 权威设计文档（v3）
+│       ├── tasks.md        # 任务拆解 + 时间线
+│       └── commercialization.md  # 商业化叙事草案
+└── .github/
+    └── copilot-instructions.md  # Copilot 项目级规范
+```
+
+## 文档导航
+
+| 想做什么 | 看这个 |
+|---|---|
+| 理解项目设计 | [`docs/design/ver2.md`](docs/design/ver2.md) |
+| 开始写代码 | [`docs/design/tasks.md`](docs/design/tasks.md) |
+| 前后端对齐接口 | [`docs/api.md`](docs/api.md) |
+| 商业化叙事（PPT 用） | [`docs/design/commercialization.md`](docs/design/commercialization.md) |
+| 比赛规则原图 | [`docs/design/contest_rules.jpg`](docs/design/contest_rules.jpg) |
+
+## 协作约定
+
+- **AI 协作分工**：B 同学（Claude 写后端 + OpenClaw）、F 同学（Copilot 写前端 + 扩展）
+- **接口契约**：`docs/api.md` 是双方对齐的唯一事实源
+- **每日同步**：晚 8 点过对方 commit，10 分钟
+- **Commit 消息**：中文，格式 `类型(范围): 简短说明`，例 `feat(backend): 实现 POST /ingest`
+
+## 团队
+
+- B 同学（后端 + Agent）
+- F 同学（前端 + 扩展）
+
+## License
+
+MIT
