@@ -1,12 +1,12 @@
-# 认知棱镜 (Prism) — 设计文档 v3
+# 问膳 (EatWhat) — 设计文档 v3
 
-> **本文档是 Prism 项目的权威设计文档**（文件名仍为 `ver2.md`，内容已升级到 v3，保持文件名稳定）。整合自 ver1.md（初稿）和 update1.txt（澄清答复），并经多轮 Claude 协作澄清后定稿。任何后续代码、文档、AI 协作都以本文档为准；ver1.md 与 update1.txt 仅作历史归档（位于 `docs/design/`）。
+> **本文档是 EatWhat 项目的权威设计文档**（文件名仍为 `ver2.md`，内容已升级到 v3，保持文件名稳定）。整合自 ver1.md（初稿）和 update1.txt（澄清答复），并经多轮 Claude 协作澄清后定稿。任何后续代码、文档、AI 协作都以本文档为准；ver1.md 与 update1.txt 仅作历史归档（位于 `docs/design/`）。
 
 ## 0. 文档元信息
 
 | 字段 | 值 |
 |---|---|
-| 项目名 | 认知棱镜 Prism |
+| 项目名 | 问膳 EatWhat |
 | Slogan | 面墙而立,破壁而观 |
 | 版本 | v3.0 |
 | 定稿日期 | 2026-05-08 |
@@ -187,7 +187,7 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
         │   └── 静态文件服务(frontend/)
         │           ↕ 读写
         │   ┌───────────────────────┐
-        │   │  SQLite (data/prism.db) │ ← 共享通道
+        │   │  SQLite (data/eatwhat.db) │ ← 共享通道
         │   └───────────────────────┘
         │           ↕ 读写
         ├── 进程 2: OpenClaw Agent
@@ -205,7 +205,7 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
 
 - **FastAPI(被动)**:只做"数据搬运"——接收扩展上报、给前端提供只读 API、CRUD 冷静期盒子。**它不调用 Gemini**,所有 AI 智能逻辑都在 OpenClaw。
 - **OpenClaw(主动)**:所有需要"思考"的事——生成报告、检索平行书架、苏格拉底追问、定时解锁冷静期。这是项目的 AI 灵魂。
-- **共享通道**:SQLite 数据库。两个进程都直接读写同一个 `data/prism.db` 文件。
+- **共享通道**:SQLite 数据库。两个进程都直接读写同一个 `data/eatwhat.db` 文件。
 
 **为什么这样设计**:让 OpenClaw 承担所有 AI 工作 → 比赛叙事是"以 OpenClaw 为主体的应用"立得住;FastAPI 只是它的"被动 IO 外壳",做扩展兼容和 Web UI 渲染。
 
@@ -332,7 +332,7 @@ CREATE TABLE logs (
 │   ├── bookshelf.html              # 平行书架
 │   ├── cooldown.html               # 冷静期盒子
 │   ├── css/
-│   │   └── prism.css               # 自写样式(基础用 Tailwind + DaisyUI CDN)
+│   │   └── eatwhat.css               # 自写样式(基础用 Tailwind + DaisyUI CDN)
 │   ├── js/
 │   │   ├── api.js                  # fetch 封装(统一 baseUrl + 错误处理)
 │   │   ├── logger.js               # 前端日志封装
@@ -365,7 +365,7 @@ CREATE TABLE logs (
 │           └── SKILL.md
 │
 ├── data/                           # 运行期数据(git ignore)
-│   ├── prism.db                    # SQLite 数据库
+│   ├── eatwhat.db                    # SQLite 数据库
 │   └── logs/                       # loguru 文件日志
 │
 └── demo/                           # 演示物料
@@ -468,7 +468,7 @@ CREATE TABLE logs (
 **简版核心**(用于初赛技术报告书):
 
 - **目标用户**:被算法困住、想夺回深度思考能力的知识工作者(互联网/媒体从业者、大学生、内容创作者)
-- **价值主张**:"市面上的工具都在帮你**多看**,Prism 帮你**看清自己看了什么**。"
+- **价值主张**:"市面上的工具都在帮你**多看**,EatWhat 帮你**看清自己看了什么**。"
 - **差异化**:不推送、不替你做决定、可解释 —— 在所有产品都抢用户注意力的时代,"反推送"本身就是稀缺资源
 - **商业模式**:
   - C 端 Freemium(基础免费 + 高级功能 ¥19/月)
@@ -484,7 +484,7 @@ CREATE TABLE logs (
 
 | # | 内容 | 负责 | 文件位置 / 说明 |
 |---|---|---|---|
-| 1 | 应用展示 **PPT** 或 **demo 视频** | 双方共建 | `demo/prism_pitch.pdf` 或 `demo/prism_demo.mp4` |
+| 1 | 应用展示 **PPT** 或 **demo 视频** | 双方共建 | `demo/eatwhat_pitch.pdf` 或 `demo/eatwhat_demo.mp4` |
 | 2 | **技术报告书** | 双方共建 | `demo/tech_report.pdf`,含架构图、技术选型、关键代码片段、商业化叙事 |
 | 3 | 完整可运行代码(含 README) | 双方 | git push 到 GitHub + 打包 zip |
 | 4 | Demo 数据 + 演示截图 | 双方 | `demo/seed_data.sql`、`demo/screenshots/` |

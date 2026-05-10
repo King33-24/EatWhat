@@ -1,4 +1,4 @@
-# 认知棱镜 (Prism) — 任务拆解与分工 v3
+# 问膳 (EatWhat) — 任务拆解与分工 v3
 
 > **本文档依据 `ver2.md` 设计文档,按 16 天初赛 + 12 天决赛节奏拆解。v3 关键变更:从"自学+实操"模式改为 vibe coding(Claude 写后端 + Copilot 写前端)。任务粒度按"AI 协作单位"重新设计。**
 
@@ -23,7 +23,7 @@
 
 ## 2. GitHub 协作约定
 
-1. **仓库名**:`prism-cognition`
+1. **仓库名**:`EatWhat`
 2. **分支模型**:
    - W1 主干开发(直接 push 到 `main`,3 周项目分支模型多余)
    - W2 起改用 `dev-frontend` / `dev-backend` 分支,每天 push,睡前合并
@@ -89,10 +89,10 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★
 - **预计**:1h
 - **怎么做**:
-  1. B 同学注册/登录 GitHub,新建仓库 `prism-cognition`(Public)
-  2. 本地:`cd /home/king/project && git init && git remote add origin https://github.com/xxx/prism-cognition.git`
+  1. B 同学注册/登录 GitHub,新建仓库 `EatWhat`(Public)
+  2. 本地:`cd /home/king/project && git init && git remote add origin https://github.com/King33-24/EatWhat.git`
   3. 当前目录已经包含 docs、.gitignore 等(由本次 setup 阶段建好),直接 `git add . && git commit -m "init: 项目骨架(v3 vibe coding 重构)" && git push -u origin main`
-  4. F 同学在自己电脑:`git clone https://github.com/xxx/prism-cognition.git`
+  4. F 同学在自己电脑:`git clone https://github.com/King33-24/EatWhat.git`
 - **验收**:两人都能看到一致的目录结构;远程仓库有 `docs/`、`.github/`、`backend/`(空) 等
 - **资源**:[GitHub 快速入门](https://docs.github.com/zh/get-started/quickstart)
 
@@ -155,7 +155,7 @@ T3 (6/6) 决赛日:现场答辩
   2. 让 Claude:"基于 ver2.md §6 的 schema,在 backend/ 写 main.py、database.py、models.py、config.py,5 张表的 SQLAlchemy 模型,FastAPI 启动后自动 create_all。最小可运行版本。"
   3. `pip install fastapi uvicorn sqlalchemy loguru python-dotenv`
   4. 跑 `uvicorn main:app --reload --host 0.0.0.0 --port 8000` → 访问 `localhost:8000` 看到 OK
-  5. 用 DBeaver 打开 `data/prism.db`,确认 5 张表存在
+  5. 用 DBeaver 打开 `data/eatwhat.db`,确认 5 张表存在
 - **验收**:浏览器访问 8000 看到 OK,DBeaver 看到 5 张表
 - **AI 协作 tip**:Claude 写完后,让它解释每个文件的职责,你看一遍能跟上
 
@@ -247,7 +247,7 @@ T3 (6/6) 决赛日:现场答辩
 - **怎么做**:
   1. 让 Claude 解释 SOUL.md 和 SKILL.md 的结构(基于 hello-claw 教程)
   2. 在 `openclaw_workspace/` 写最小的 SOUL.md
-  3. 在 `skills/` 写 `hello/SKILL.md`:让 Agent 收到"say hello"时回复"我是认知棱镜,为你服务"
+  3. 在 `skills/` 写 `hello/SKILL.md`:让 Agent 收到"say hello"时回复"我是问膳,为你服务"
   4. WebChat 测试
 - **验收**:WebChat 输入"say hello"→ Agent 返回自定义文案
 - **降级方案**:OpenClaw 真不行的话,这步推迟到 W2,先用纯 Python 脚本调 Gemini 占位
@@ -407,7 +407,7 @@ T3 (6/6) 决赛日:现场答辩
   2. 每个人设 30 条左右假数据,写成 SQL insert,存 `demo/seed_data.sql`
   3. 跑一遍报告生成,确认三人报告**显著不同**(亮点!)
   4. 保留生成的报告 JSON 作为"参考输出",演示时如果 Gemini 临场不给力直接放预生成版
-- **验收**:`sqlite3 data/prism.db < demo/seed_data.sql` 后能立刻生成有意义的报告
+- **验收**:`sqlite3 data/eatwhat.db < demo/seed_data.sql` 后能立刻生成有意义的报告
 
 ### S-07:UI 抛光 + 截图(5/22 下午)
 - **谁做**:F 同学主操,B 同学协助
@@ -431,7 +431,7 @@ T3 (6/6) 决赛日:现场答辩
      - 210-240s:理念 + 未来规划 + 团队
   2. 用 Ubuntu 内置录屏(GNOME Screenshot)或 OBS Studio 录
   3. 录 3-5 遍选最好的
-  4. 存 `demo/prism_demo.mp4`(.gitignore 不传 GitHub,只上传到夸克网盘)
+  4. 存 `demo/eatwhat_demo.mp4`(.gitignore 不传 GitHub,只上传到夸克网盘)
 - **验收**:3-5 分钟视频,清晰、流畅,主要功能都演示了
 
 ### D-02:答辩 PPT(5/23 ~ 5/24)
@@ -442,7 +442,7 @@ T3 (6/6) 决赛日:现场答辩
   1. 按 ver2.md §13.1 PPT 大纲做 6-8 页
   2. 风格:简洁、低饱和、和 Web UI 配色一致(以浅灰 + 深绿)
   3. 让 Claude 帮你润色文案
-  4. 存 `demo/prism_pitch.pdf` 和 .pptx 双格式
+  4. 存 `demo/eatwhat_pitch.pdf` 和 .pptx 双格式
 - **验收**:PPT 自洽,3 分钟内能讲完
 
 ### D-03:技术报告书(5/23 ~ 5/24)
@@ -463,9 +463,9 @@ T3 (6/6) 决赛日:现场答辩
 - **预计**:1h
 - **怎么做**:
   1. `git push` 一次最终代码到 GitHub(确保 README 完整)
-  2. 打包:`prism_submission_v1.zip` 含:
-     - `prism_pitch.pdf`(PPT)
-     - `prism_demo.mp4`(视频)
+  2. 打包:`eatwhat_submission_v1.zip` 含:
+     - `eatwhat_pitch.pdf`(PPT)
+     - `eatwhat_demo.mp4`(视频)
      - `tech_report.pdf`
      - `screenshots/`
      - `seed_data.sql`
@@ -548,7 +548,7 @@ T3 (6/6) 决赛日:现场答辩
 我要在 frontend/[page].html 实现 [功能]。
 - API 是 [GET/POST] [path],响应格式见 docs/api.md §X
 - 用 HTMX 属性优先,只在必要时(画图/复杂状态)写 JS
-- UI 用 DaisyUI 组件,配色见 prism.css
+- UI 用 DaisyUI 组件,配色见 eatwhat.css
 - 不要用 React/Vue/Vite/构建工具,纯 CDN
 请写完整 HTML + 必要 JS。
 ```

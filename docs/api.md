@@ -1,4 +1,4 @@
-# Prism API 接口契约 v1.0
+# EatWhat API 接口契约 v1.0
 
 > **用途**：前后端 + 浏览器扩展 + OpenClaw 之间的接口约定。任何一方修改前先在群里同步。
 > **后端服务地址**：`http://localhost:8000`
@@ -401,7 +401,7 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
 **响应**：
 ```json
 {
-  "message": "Prism Backend OK",
+  "message": "EatWhat Backend OK",
   "version": "1.0.0",
   "openclaw_status": "running"
 }
@@ -455,7 +455,7 @@ fetch('/api/report/latest').then(r => r.json()).then(({data}) => {
 from fastapi import FastAPI
 from routers import ingest, report, bookshelf, cooldown, logs
 
-app = FastAPI(title="Prism Backend")
+app = FastAPI(title="EatWhat Backend")
 app.include_router(ingest.router)
 app.include_router(report.router, prefix="/api/report")
 app.include_router(bookshelf.router, prefix="/api/bookshelf")
@@ -464,7 +464,7 @@ app.include_router(logs.router, prefix="/api")
 
 @app.get("/")
 def health():
-    return {"message": "Prism Backend OK", "version": "1.0.0"}
+    return {"message": "EatWhat Backend OK", "version": "1.0.0"}
 ```
 
 ### 8.2 统一响应包装

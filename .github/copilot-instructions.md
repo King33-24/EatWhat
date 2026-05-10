@@ -1,4 +1,4 @@
-# GitHub Copilot 项目级规范 — Prism (认知棱镜)
+# GitHub Copilot 项目级规范 — EatWhat (问膳)
 
 > 本文件由 GitHub Copilot 在 VS Code 中自动读取并遵守。修改后无需重启 VS Code，下一次补全即生效。
 > 详细设计参见 `docs/design/ver2.md`。
@@ -7,7 +7,7 @@
 
 ## 项目背景
 
-**Prism** 是一个基于 **OpenClaw 智能体框架** 的认知健康应用，让用户审视自己在 B 站的浏览足迹、看见信息茧房之外的视角、夺回深度思考的主动权。三个 MVP 功能：认知体检报告、平行书架、冷静期盒子。
+**EatWhat** 是一个基于 **OpenClaw 智能体框架** 的认知健康应用，让用户审视自己在 B 站的浏览足迹、看见信息茧房之外的视角、夺回深度思考的主动权。三个 MVP 功能：认知体检报告、平行书架、冷静期盒子。
 
 **比赛赛道**：智能体应用（不是框架），评分维度包括场景创新、用户体验、业务逻辑、智能交互、商业化潜力。
 
@@ -83,13 +83,13 @@
 
 ### CSS 类名
 - Tailwind utility classes 优先（`bg-gray-100 text-center`）
-- 自写类用前缀 `prism-`（例：`prism-blind-spot-card`）
+- 自写类用前缀 `eatwhat-`（例：`eatwhat-blind-spot-card`）
 - 不要起像 `mainContainer` 这种 camelCase 类名
 
 ### JS 变量
 - camelCase（前端 JS 内部一致）
 - 与后端通信的 JSON 字段保持 `snake_case`（不要在前端把 `report_id` 改成 `reportId`）
-- 全局变量加前缀 `Prism`（例：`window.Prism = {api, logger}`）
+- 全局变量加前缀 `EatWhat`（例：`window.EatWhat = {api, logger}`）
 
 ### HTML
 - 缩进 2 空格
@@ -116,7 +116,7 @@
 | 解锁 | `#2ecc71` | 绿 |
 | 灰阶禁用 | `#d5dbdb` | |
 
-DaisyUI 主题选 `pastel` 或自定义 prism 主题。
+DaisyUI 主题选 `pastel` 或自定义 eatwhat 主题。
 
 ---
 
@@ -149,7 +149,7 @@ DaisyUI 主题选 `pastel` 或自定义 prism 主题。
 ## 调试与日志
 
 所有关键操作必须打日志（**比赛评分点**）：
-- 前端：用 `Prism.logger.log(source, level, msg, ctx)` 封装的函数
+- 前端：用 `EatWhat.logger.log(source, level, msg, ctx)` 封装的函数
 - 扩展：用 `extension/logger.js` 封装的函数（与前端类似）
 - 日志同时打 console 和 POST 到 `/api/log`
 - level: `DEBUG`/`INFO`/`WARN`/`ERROR`
@@ -165,7 +165,7 @@ DaisyUI 主题选 `pastel` 或自定义 prism 主题。
 2. ❌ **没引入新 npm 依赖**（只用 CDN）
 3. ❌ **没违反 api.md 字段命名**（保持 snake_case 跨端）
 4. ❌ **没忘记 CORS**（与后端通信确认 origin 允许）
-5. ❌ **没硬编码 API URL**（用 `Prism.api.baseUrl`，统一在 `js/api.js`）
+5. ❌ **没硬编码 API URL**（用 `EatWhat.api.baseUrl`，统一在 `js/api.js`）
 6. ❌ **没忘记打日志**（关键操作都要）
 7. ❌ **没写多余注释**（写"为什么"，不写"做什么"）
 
