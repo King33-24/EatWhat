@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="pastel">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EatWhat · 认知体检报告</title>
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.13/dist/full.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+  <link rel="stylesheet" href="/css/eatwhat.css">
+</head>
+<body class="eatwhat-page">
+  <header class="navbar border-b border-base-200 bg-base-100/95 px-4 shadow-sm">
+    <div class="mx-auto flex w-full max-w-6xl items-center justify-between">
+      <a class="btn btn-ghost px-1 text-xl font-semibold normal-case" href="/">
+        <span class="text-2xl">🍽️</span>
+        <span>问膳 EatWhat</span>
+      </a>
+      <nav class="hidden gap-2 md:flex">
+        <a href="index.html" class="btn btn-sm btn-ghost">主页</a>
+        <a href="report.html" class="btn btn-sm btn-ghost btn-active">认知体检报告</a>
+        <a href="bookshelf.html" class="btn btn-sm btn-ghost">平行书架</a>
+        <a href="cooldown.html" class="btn btn-sm btn-ghost">冷静期盒子</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-8">
+    <section class="card eatwhat-card bg-base-100">
+      <div class="card-body">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 class="text-2xl font-semibold md:text-3xl">认知体检报告</h1>
+            <p class="text-sm text-base-content/70">兴趣地图 · 观点光谱 · 思维盲区 · 情绪共鸣模式</p>
+          </div>
+          <button class="btn eatwhat-btn-main"
+                  hx-post="/api/report/generate"
+                  hx-target="#report-status"
+                  hx-swap="innerHTML">立即生成报告</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="report-status" class="alert bg-[var(--eatwhat-highlight)] text-sm text-base-content/80">
+      当前为骨架页：后端接口接好后将实时展示最新报告。
+    </div>
+
+    <section class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      <article class="card eatwhat-card bg-base-100">
+        <div class="card-body">
+          <h2 class="card-title">兴趣地图（ECharts）</h2>
+          <div id="interest-map" class="eatwhat-chart-placeholder">
+            兴趣地图图表占位区域
+          </div>
+        </div>
+      </article>
+
+      <article class="card eatwhat-card bg-base-100">
+        <div class="card-body">
+          <h2 class="card-title">观点倾向光谱（ECharts）</h2>
+          <div id="opinion-spectrum" class="eatwhat-chart-placeholder">
+            观点光谱图表占位区域
+          </div>
+        </div>
+      </article>
+
+      <article class="card eatwhat-card bg-base-100 xl:col-span-2">
+        <div class="card-body">
+          <h2 class="card-title">思维盲区快照</h2>
+          <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div class="rounded-lg border border-dashed border-[var(--eatwhat-alert)] bg-white/70 p-4 text-sm text-base-content/80">
+              占位：你这周可能忽略了哪些关键对立视角。
+            </div>
+            <div class="rounded-lg border border-dashed border-[var(--eatwhat-alert)] bg-white/70 p-4 text-sm text-base-content/80">
+              占位：每条盲区将附带证据视频引用。
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card eatwhat-card bg-base-100 xl:col-span-2">
+        <div class="card-body">
+          <h2 class="card-title">情绪共鸣模式</h2>
+          <div class="rounded-lg border border-dashed border-base-300 bg-white/70 p-4 text-sm text-base-content/80">
+            占位：这里会显示“焦虑/兴奋/愤怒”等高频情绪及对应样例内容。
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/logger.js"></script>
+  <script>
+    'use strict';
+
+    window.addEventListener('DOMContentLoaded', function () {
+      if (window.EatWhat && window.EatWhat.logger) {
+        window.EatWhat.logger.log('frontend', 'INFO', '进入报告页', { page: '/report.html' });
+      }
+    });
+  </script>
+</body>
+</html>

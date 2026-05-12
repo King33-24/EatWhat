@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="pastel">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EatWhat · 冷静期盒子</title>
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.13/dist/full.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+  <link rel="stylesheet" href="/css/eatwhat.css">
+</head>
+<body class="eatwhat-page">
+  <header class="navbar border-b border-base-200 bg-base-100/95 px-4 shadow-sm">
+    <div class="mx-auto flex w-full max-w-6xl items-center justify-between">
+      <a class="btn btn-ghost px-1 text-xl font-semibold normal-case" href="/">
+        <span class="text-2xl">🍽️</span>
+        <span>问膳 EatWhat</span>
+      </a>
+      <nav class="hidden gap-2 md:flex">
+        <a href="index.html" class="btn btn-sm btn-ghost">主页</a>
+        <a href="report.html" class="btn btn-sm btn-ghost">认知体检报告</a>
+        <a href="bookshelf.html" class="btn btn-sm btn-ghost">平行书架</a>
+        <a href="cooldown.html" class="btn btn-sm btn-ghost btn-active">冷静期盒子</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-8">
+    <section class="card eatwhat-card bg-base-100">
+      <div class="card-body">
+        <h1 class="text-2xl font-semibold md:text-3xl">冷静期盒子</h1>
+        <p class="text-sm text-base-content/70">把冲动想看的链接先锁住，给决策留 7 天缓冲时间。</p>
+        <form class="grid grid-cols-1 gap-3 md:grid-cols-6"
+              hx-post="/api/cooldown"
+              hx-target="#cooldown-status"
+              hx-swap="innerHTML">
+          <input class="input input-bordered md:col-span-3" name="url" type="url" placeholder="https://example.com/video" required>
+          <input class="input input-bordered md:col-span-2" name="title" placeholder="标题（可选）">
+          <input class="input input-bordered md:col-span-1" name="lock_days" type="number" min="1" max="30" value="7">
+          <textarea class="textarea textarea-bordered md:col-span-5" name="user_note" placeholder="为什么想看？（可选）"></textarea>
+          <button class="btn eatwhat-btn-main md:col-span-1" type="submit">存入盒子</button>
+        </form>
+      </div>
+    </section>
+
+    <div id="cooldown-status" class="alert bg-[var(--eatwhat-highlight)] text-sm text-base-content/80">
+      当前为骨架页：提交后会接入后端并刷新列表。
+    </div>
+
+    <section class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      <article class="card eatwhat-card bg-base-100">
+        <div class="card-body">
+          <div class="flex items-center justify-between">
+            <h2 class="card-title">锁定中</h2>
+            <span class="badge badge-error badge-outline">locked</span>
+          </div>
+          <div class="rounded-lg border border-[var(--eatwhat-alert)]/30 bg-white/80 p-3 text-sm">
+            占位：这里会显示倒计时与 remaining_seconds。
+          </div>
+        </div>
+      </article>
+
+      <article class="card eatwhat-card bg-base-100">
+        <div class="card-body">
+          <div class="flex items-center justify-between">
+            <h2 class="card-title">已解锁</h2>
+            <span class="badge badge-success badge-outline">unlocked</span>
+          </div>
+          <div class="rounded-lg border border-[var(--eatwhat-unlock)]/30 bg-white/80 p-3 text-sm">
+            占位：这里会显示已解锁链接，用户可点击回看或手动丢弃。
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/logger.js"></script>
+  <script>
+    'use strict';
+
+    window.addEventListener('DOMContentLoaded', function () {
+      if (window.EatWhat && window.EatWhat.logger) {
+        window.EatWhat.logger.log('frontend', 'INFO', '进入冷静期页', { page: '/cooldown.html' });
+      }
+    });
+  </script>
+</body>
+</html>
