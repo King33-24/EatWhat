@@ -25,7 +25,7 @@ EatWhat 通过审视用户在 B 站的数字足迹，帮 TA 看见信息茧房�
 ## 技术栈
 
 - **Agent 主体**：[OpenClaw](https://github.com/openclaw/openclaw)
-- **大模型**：Gemini 3 Flash（通过 Google AI Studio 免费 API）
+- **大模型**：DeepSeek V4 Flash（通过 DeepSeek API）
 - **后端**：FastAPI + SQLAlchemy + SQLite
 - **Web Dashboard**：HTML + HTMX + Tailwind + DaisyUI + ECharts（**全 CDN，无构建工具**）
 - **浏览器扩展**：Manifest V3，原生 JS
@@ -40,7 +40,7 @@ EatWhat 通过审视用户在 B 站的数字足迹，帮 TA 看见信息茧房�
 - Ubuntu 24.04 LTS
 - Python 3.12
 - Google Chrome
-- Gemini API Key（[这里申请](https://aistudio.google.com/app/apikey)）
+- DeepSeek API Key（[这里申请](https://platform.deepseek.com/api_keys)）
 
 ### 后端
 
@@ -49,7 +49,7 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-export GEMINI_API_KEY=你的key
+export DEEPSEEK_API_KEY=你的key
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 

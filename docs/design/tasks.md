@@ -96,16 +96,16 @@ T3 (6/6) 决赛日:现场答辩
 - **验收**:两人都能看到一致的目录结构;远程仓库有 `docs/`、`.github/`、`backend/`(空) 等
 - **资源**:[GitHub 快速入门](https://docs.github.com/zh/get-started/quickstart)
 
-### S-02:申请 Gemini API Key 并测试
+### S-02:申请 DeepSeek API Key 并测试
 - **谁做**:B 同学
 - **难度**:★
 - **预计**:1h
 - **怎么做**:
-  1. <https://aistudio.google.com/app/apikey> 创建 API 密钥
+  1. <https://platform.deepseek.com/api_keys> 创建 API 密钥
   2. 用 curl 测试调用(测试命令见 `docs/api.md` 附录或问 Claude)
-  3. 配置环境变量:`echo 'export GEMINI_API_KEY=xxx' >> ~/.bashrc && source ~/.bashrc`
+  3. 配置环境变量:`echo 'export DEEPSEEK_API_KEY=xxx' >> ~/.bashrc && source ~/.bashrc`
 - **验收**:curl 返回成功响应
-- **注意**:免费层 1500 请求/天,够用
+- **注意**:DeepSeek 按 token 计费(¥1 起充),初赛+决赛预算 ¥2 内
 
 ### S-03:确认 API 接口契约
 - **谁做**:双方一起花 30 分钟过一遍 `docs/api.md`
@@ -139,12 +139,12 @@ T3 (6/6) 决赛日:现场答辩
 - **预计**:6h(留 1.5 天)
 - **怎么做**:
   1. <https://github.com/openclaw/openclaw> 看 README Installation
-  2. 装好 + 配置 Gemini Key + 启动 → WebChat localhost:8001
+  2. 装好 + 配置 DeepSeek Key + 启动 → WebChat localhost:8001
   3. 用 Claude 协作:把官方 README 贴给 Claude,让它解释每一步
   4. 卡住先看 [datawhalechina/hello-claw](https://github.com/datawhalechina/hello-claw) 中文教程
   5. 还卡就跳过,先做 B-03,W1 末再回来
-- **验收**:WebChat 能聊天,Agent 用 Gemini 回复
-- **降级方案**:如果实在跑不起来,先用 Python 直接调 Gemini API 占位,后期再补
+- **验收**:WebChat 能聊天,Agent 用 DeepSeek 回复
+- **降级方案**:如果实在跑不起来,先用 Python 直接调 DeepSeek API 占位,后期再补
 
 ### B-03:FastAPI 骨架 + SQLite 初始化(5/10)
 - **谁做**:B 同学(让 Claude 写)
@@ -250,7 +250,7 @@ T3 (6/6) 决赛日:现场答辩
   3. 在 `skills/` 写 `hello/SKILL.md`:让 Agent 收到"say hello"时回复"我是问膳,为你服务"
   4. WebChat 测试
 - **验收**:WebChat 输入"say hello"→ Agent 返回自定义文案
-- **降级方案**:OpenClaw 真不行的话,这步推迟到 W2,先用纯 Python 脚本调 Gemini 占位
+- **降级方案**:OpenClaw 真不行的话,这步推迟到 W2,先用纯 Python 脚本调 DeepSeek 占位
 
 ### S-04:W1 末全链路联调 + 决定是否动 OpenClaw(5/14 晚)
 - **谁做**:双方
@@ -268,7 +268,7 @@ T3 (6/6) 决赛日:现场答辩
 - [ ] GitHub 仓库 main 分支有完整骨架
 - [ ] VM 环境 Chrome/VS Code/Python 都装好,Copilot 在 VS Code 工作正常
 - [ ] FastAPI 跑起来 8000 端口能访问
-- [ ] OpenClaw WebChat 能聊天(或降级到纯 Python 调 Gemini)
+- [ ] OpenClaw WebChat 能聊天(或降级到纯 Python 调 DeepSeek)
 - [ ] SQLite 5 张表建好
 - [ ] 扩展能加载,B 站页面能抓数据
 - [ ] **全链路:B 站采集 → FastAPI → SQLite,通!**
@@ -284,11 +284,11 @@ T3 (6/6) 决赛日:现场答辩
 - **预计**:8h(分散 3 天)
 - **怎么做**:
   1. **5/15 上午**:让 Claude 帮你写 prompt 草稿(参考 ver2.md §2.1 报告四板块)
-  2. **5/15 下午**:在 AI Studio 喂 20-30 条模拟视频数据测试 prompt,迭代到输出稳定 JSON
-  3. **5/16**:把最终 prompt 嵌入 SKILL.md 的 instructions 段;Skill 工作流:读 raw_observations 近 7 天 → 调 Gemini → 解析 JSON → 写 reports 表
+  2. **5/15 下午**:在 DeepSeek Playground(<https://platform.deepseek.com/playground>)或用 curl 脚本喂 20-30 条模拟视频数据测试 prompt,迭代到输出稳定 JSON
+  3. **5/16**:把最终 prompt 嵌入 SKILL.md 的 instructions 段;Skill 工作流:读 raw_observations 近 7 天 → 调 DeepSeek → 解析 JSON → 写 reports 表
   4. **5/17**:WebChat 测试触发,看 reports 表新增记录
 - **验收**:WebChat 输入"生成本周认知体检报告"→ reports 表新增一条 + JSON 各字段完整
-- **AI 协作 tip**:让 Claude 帮你设计 prompt 的"系统消息"和"few-shot 示例",并要求 Gemini 输出严格 JSON(用 `response_mime_type: application/json`)
+- **AI 协作 tip**:让 Claude 帮你设计 prompt 的"系统消息"和"few-shot 示例",并要求 DeepSeek 输出严格 JSON(用 `response_mime_type: application/json`)
 - **降级**:OpenClaw 不行就写 `backend/skills/analyze_cognition.py` 纯脚本,FastAPI 启动时跑一次 cron(用 BackgroundTasks 或独立线程)
 
 ### O-03:实现 search_parallel_views Skill(5/18)
@@ -297,12 +297,12 @@ T3 (6/6) 决赛日:现场答辩
 - **预计**:5h
 - **怎么做**:
   1. Prompt 输入:reports.blind_spots
-  2. 用 Gemini 3 Flash + grounding(Google Search)
+  2. 用 DeepSeek + Bing Search API(或 Serper.dev)做 grounding(检索外部观点)
   3. 让 Claude 设计 prompt:要求"理性、非煽动",输出 2-3 条/盲区
   4. 写入 bookshelf_items 表
   5. 在 analyze_cognition Skill 末尾自动触发(连带调用)
 - **验收**:报告生成后,DB 新增对应 bookshelf_items
-- **注意**:Gemini grounding 免费层有限,演示前要预生成
+- **注意**:Bing/Serper 搜索 API 有调用限额(免费层 1000 次/月),演示前要预生成
 
 ### B-05:实现 GET /api/report/* 和 /api/bookshelf(5/16 并行)
 - **谁做**:B 同学
@@ -406,7 +406,7 @@ T3 (6/6) 决赛日:现场答辩
   1. 准备 2-3 个"虚拟人设"浏览数据(算法焦虑者 / 信息茧房型 / 理性消费者)
   2. 每个人设 30 条左右假数据,写成 SQL insert,存 `demo/seed_data.sql`
   3. 跑一遍报告生成,确认三人报告**显著不同**(亮点!)
-  4. 保留生成的报告 JSON 作为"参考输出",演示时如果 Gemini 临场不给力直接放预生成版
+  4. 保留生成的报告 JSON 作为"参考输出",演示时如果 DeepSeek 临场不给力直接放预生成版
 - **验收**:`sqlite3 data/eatwhat.db < demo/seed_data.sql` 后能立刻生成有意义的报告
 
 ### S-07:UI 抛光 + 截图(5/22 下午)

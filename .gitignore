@@ -36,7 +36,7 @@ demo/*.avi
 .env.local
 *.key
 config/secrets.*
-gemini_key.txt
+deepseek_key.txt
 
 # 浏览器扩展生成物
 extension/.web-extension-id

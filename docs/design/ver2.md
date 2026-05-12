@@ -26,7 +26,7 @@
 - **v2**(2026-05-08 上午):经澄清后定稿
   - 砍 5 → 3 个 MVP 功能(① 体检报告、② 平行书架、⑤ 冷静期盒子)
   - 修正 OpenClaw 的角色:它是主体型 Agent 运行时,不是被代码调用的库
-  - 升级 Gemini 1.5 Flash → Gemini 3 Flash(1.5 已下线)
+  - 切换 LLM 后端:Gemini → DeepSeek(以 V4 Flash 为主)
   - 确定混合架构:FastAPI 当被动入口和 Web Dashboard,OpenClaw 当智能主体
   - 数据采集策略:公开页面 + 用户主动指定(不碰登录态历史)
 - **v3**(2026-05-08 晚上):vibe coding 重构 + 比赛规则确认
@@ -78,7 +78,7 @@
 
 **苏格拉底式追问入口**:每条推荐下有按钮跳转到 OpenClaw WebChat,调用 `socratic_dialog` Skill 与用户深入探讨。
 
-**实现方式**:调用 Gemini 3 Flash 的 grounding(Google Search)能力,让它实时搜索 + 筛选。
+**实现方式**:先用 Bing Search API(或 Serper.dev)实时搜索,把搜索结果作为上下文喂给 DeepSeek,让它筛选 + 总结。
 
 ### 2.3 ⑤ 冷静期盒子
 
@@ -96,22 +96,22 @@
 
 ### 3.1 ③ 他人之眼
 
-让用户选择一个预设"身份镜像"(小镇退休教师 / 一线城市外卖员 / 大厂 HR / 备考的高三学生),用 LLM 角色扮演生成该群体典型的首页信息流预览。**不是真实数据集**,纯靠 Gemini prompt 生成"非真实的"5 分钟另一个人的世界。体验完后 Agent 引导用户记录"最意外的共鸣点 / 最深刻的差异"。
+让用户选择一个预设"身份镜像"(小镇退休教师 / 一线城市外卖员 / 大厂 HR / 备考的高三学生),用 LLM 角色扮演生成该群体典型的首页信息流预览。**不是真实数据集**,纯靠 DeepSeek prompt 生成"非真实的"5 分钟另一个人的世界。体验完后 Agent 引导用户记录"最意外的共鸣点 / 最深刻的差异"。
 
 **为什么放后期**:UI 工作量大(要做信息流的视觉模拟),且 prompt 工程要花时间打磨"角色逼真度"。
 
 ### 3.2 ④ 沧海遗珠
 
-基于用户深度消费的内容(完整看完、反复观看、主动搜索),用 Gemini 自带知识 + grounding 检索全网被算法埋没的经典(长文、纪录片)。每条附一封"小信":"这篇 2019 年的长文,和你上周痴迷的那个系列,在 XXX 问题上一脉相承,但走得更远。"
+基于用户深度消费的内容(完整看完、反复观看、主动搜索),用 DeepSeek 自带知识 + Bing/Serper 搜索 API 检索全网被算法埋没的经典(长文、纪录片)。每条附一封"小信":"这篇 2019 年的长文,和你上周痴迷的那个系列,在 XXX 问题上一脉相承,但走得更远。"
 
-**为什么放后期**:检索质量不可控,"被埋没的经典"是个模糊判断,Gemini 的搜索结果可能流于表面。
+**为什么放后期**:检索质量不可控,"被埋没的经典"是个模糊判断,搜索 API 返回结果质量难控,流于表面。
 
 ### 3.3 隐私增强:本地模型选项
 
 OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"换"的方式是改 SOUL.md 里 `model:` 字段。
 
 **MVP 阶段不真做的原因**:
-- 8B 级模型分析"思维盲区"的质量明显弱于 Gemini Flash,演示效果会打折
+- 8B 级模型分析"思维盲区"的质量明显弱于 DeepSeek Flash,演示效果会打折
 - 用户要装 Ollama + 拉 4-8GB 模型,对最终用户不友好
 - 需要至少 16GB 内存的电脑
 
@@ -127,7 +127,7 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
 | 浏览器 | Google Chrome for Linux | 最新稳定版 | 支持 Manifest V3 扩展 |
 | 监测站点 | B 站网页版 | bilibili.com/video/* | 用户主动指定 + 公开页面 |
 | **Agent 主体** | **OpenClaw**(github.com/openclaw/openclaw) | latest | 比赛要求;本地运行 + Skill 系统 |
-| **大模型** | **Gemini 3 Flash**(主) + **Gemini 3.1 Flash-Lite**(轻任务) | 通过 Google AI Studio 申请的免费 API Key | 1.5 已下线;Flash 系列免费层够用 |
+| **大模型** | **DeepSeek V4 Flash**(主) + **DeepSeek V3**(轻任务) | 通过 DeepSeek 开放平台申请,按 token 计费(¥1 起充,初赛+决赛预计 ¥1 内够用) |
 | **Web 后端** | FastAPI + Uvicorn | Python 3.12 | 轻量、文档好、AI 写顺手 |
 | **数据库** | SQLite | 内嵌,单文件 | 无需服务,零配置 |
 | ORM | SQLAlchemy 2.0 | - | 比裸 sqlite3 更易维护 |
@@ -193,8 +193,8 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
         ├── 进程 2: OpenClaw Agent
         │   ├── SOUL.md(Agent 人格)
         │   └── Skills/
-        │       ├── analyze_cognition       (周更 / 主动触发:读 DB → 调 Gemini → 写 reports)
-        │       ├── search_parallel_views   (报告生成后:调 Gemini grounding → 写 bookshelf_items)
+        │       ├── analyze_cognition       (周更 / 主动触发:读 DB → 调 DeepSeek → 写 reports)
+        │       ├── search_parallel_views   (报告生成后:Bing/Serper 搜索 + DeepSeek 筛选 → 写 bookshelf_items)
         │       ├── socratic_dialog         (WebChat 对话:基于书架 / 报告上下文追问)
         │       └── cooldown_unlock         (cron 每日:扫描 unlock_at<now → status='unlocked')
         │
@@ -203,7 +203,7 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
 
 ### 5.2 进程分工
 
-- **FastAPI(被动)**:只做"数据搬运"——接收扩展上报、给前端提供只读 API、CRUD 冷静期盒子。**它不调用 Gemini**,所有 AI 智能逻辑都在 OpenClaw。
+- **FastAPI(被动)**:只做"数据搬运"——接收扩展上报、给前端提供只读 API、CRUD 冷静期盒子。**它不调用 DeepSeek**,所有 AI 智能逻辑都在 OpenClaw。
 - **OpenClaw(主动)**:所有需要"思考"的事——生成报告、检索平行书架、苏格拉底追问、定时解锁冷静期。这是项目的 AI 灵魂。
 - **共享通道**:SQLite 数据库。两个进程都直接读写同一个 `data/eatwhat.db` 文件。
 
@@ -214,10 +214,10 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
 | # | 触发 | 路径 |
 |---|---|---|
 | 1 | 用户在 B 站打开视频 + 点扩展"采集" | `content.js` 抓 DOM → `background.js` → `POST :8000/ingest` → FastAPI → 写 `raw_observations` 表 |
-| 2 | 周日 23:00 / 用户点"生成报告" | OpenClaw cron / 用户消息 → `analyze_cognition` Skill → 读 `raw_observations` 近 7 天 → 调 Gemini 3 Flash → 写 `reports` 表 |
-| 3 | 报告生成后自动 / 用户点"刷新书架" | `search_parallel_views` Skill → 读最新 `reports.blind_spots` → 调 Gemini grounding → 写 `bookshelf_items` 表 |
+| 2 | 周日 23:00 / 用户点"生成报告" | OpenClaw cron / 用户消息 → `analyze_cognition` Skill → 读 `raw_observations` 近 7 天 → 调 DeepSeek V4 Flash → 写 `reports` 表 |
+| 3 | 报告生成后自动 / 用户点"刷新书架" | `search_parallel_views` Skill → 读最新 `reports.blind_spots` → Bing/Serper 搜索 + DeepSeek 筛选 → 写 `bookshelf_items` 表 |
 | 4 | 用户访问 `/report.html` | 浏览器 → FastAPI → 读 `reports` 最新一条 → 渲染 HTML + ECharts |
-| 5 | 用户点"苏格拉底追问" | 浏览器 → OpenClaw WebChat → `socratic_dialog` Skill → Gemini 多轮对话 |
+| 5 | 用户点"苏格拉底追问" | 浏览器 → OpenClaw WebChat → `socratic_dialog` Skill → DeepSeek 多轮对话 |
 | 6 | 用户存"冷静期盒子" | 扩展右键 / Web 输入框 → FastAPI → 写 `cooldown_items` 表 |
 | 7 | 每天 00:30 | OpenClaw cron → `cooldown_unlock` Skill → 更新 `status='unlocked'` |
 
@@ -312,7 +312,7 @@ CREATE TABLE logs (
 │
 ├── backend/                        # FastAPI 后端(用户主负责,Claude 写)
 │   ├── main.py                     # FastAPI 应用入口
-│   ├── config.py                   # 配置:端口、DB 路径、Gemini Key
+│   ├── config.py                   # 配置:端口、DB 路径、DeepSeek Key
 │   ├── database.py                 # SQLAlchemy engine 初始化
 │   ├── models.py                   # ORM 模型(对应 schema 5 张表)
 │   ├── logger.py                   # loguru 配置 + 写 SQLite logs 表
@@ -388,7 +388,7 @@ CREATE TABLE logs (
 | 数据采集深度 | 公开页面 + 用户主动指定 | 不碰登录态,避开合规风险和 B 站风控 |
 | 前后端通信 | 同一台机器 localhost,FastAPI 起 :8000 | 简单直接;CORS 也好处理 |
 | FastAPI 与 OpenClaw 通信 | **共享 SQLite 文件** | 不需要再加 RPC / 消息队列 |
-| Gemini 模型 | 主用 3 Flash,轻任务 3.1 Flash-Lite | 免费层够用;3 Flash 默认 Flash 模型 |
+| DeepSeek 模型 | 用 deepseek-chat(V4 Flash 别名)| 国内直连无需代理,OpenAI 兼容接口 |
 | 数据库 | SQLite(不是 PostgreSQL) | 单文件零配置;体量小够用 |
 | 隐私模式 | 设计上预留 SOUL.md model 切换接口,不真实现 | MVP 阶段时间不够,作为加分项展示 |
 | Demo 数据 | 预制 30-50 条 + 用户实采混合 | 评委演示时用预制数据保证报告质量稳定 |
@@ -401,10 +401,10 @@ CREATE TABLE logs (
 | 风险 | 影响 | 应对 |
 |---|---|---|
 | OpenClaw 文档新、坑多 | 学习成本高,可能卡进度 | 预留 W1 整周用于环境 + 学 SOUL.md/SKILL.md;datawhalechina/hello-claw 中文教程可参考 |
-| Gemini 安全过滤误伤 | "情绪共鸣 / 政治议题" 分析可能被拒 | Prompt 里明确"以分析者口吻、客观描述",避免触发;准备降级到 Flash-Lite 重试 |
-| Gemini 3 Flash 免费层 RPM/RPD 限制 | 演示时调用拒绝 | 演示前提前生成好报告并存 DB;演示时只展示数据库里的结果 |
+| DeepSeek 内容审核拦截 | "情绪/政治议题"分析可能触发审核 | Prompt 强调"分析者口吻、客观描述";触发后改写 prompt 重试 |
+| DeepSeek API 偶发限流或抖动 | 演示时实时调用失败 | 演示前提前生成好报告并存 DB;演示时只展示数据库里的结果 |
 | 浏览器扩展跨域 / 反爬 | 抓取失败 | content script 直接读 DOM,不走 B 站 API 不会触发反爬;CORS 在 FastAPI 里配 `Access-Control-Allow-Origin: chrome-extension://...` |
-| "思维盲区" 分析效果主观 | 演示时被质疑 | Prompt 里要求 Gemini 给出 evidence(具体视频引用),让结论可追溯 |
+| "思维盲区" 分析效果主观 | 演示时被质疑 | Prompt 里要求 DeepSeek 给出 evidence(具体视频引用),让结论可追溯 |
 | 前后端 + 扩展三端联调耗时 | 16 天来不及 | W1 末就跑通最小链路(哪怕只抓 1 个字段),之后是迭代 |
 | VMware 性能 | Chrome + DevTools + VS Code 可能卡 | VM 给 6GB 内存 + 4 核;不开太多浏览器 tab |
 | **vibe coding 失控**(v3 新增) | AI 写出与设计偏离的代码 | `.github/copilot-instructions.md` 严格约束;每天互相 code review |
@@ -415,8 +415,8 @@ CREATE TABLE logs (
 ## 10. 演进规划(答辩时展示,不真做)
 
 - **他人之眼**(功能 ③):身份镜像 + LLM 角色扮演
-- **沧海遗珠**(功能 ④):Gemini grounding 检索被埋没经典 + "小信" 文案
-- **本地模型隐私模式**:Ollama + Llama 3.1 8B 替换 Gemini
+- **沧海遗珠**(功能 ④):Bing/Serper 搜索 + DeepSeek 筛选检索被埋没经典 + "小信" 文案
+- **本地模型隐私模式**:Ollama + Llama 3.1 8B 替换 DeepSeek
 - **观点变化历史**:累积报告对比,画"我一年的认知变迁曲线"
 - **多平台扩展**:从 B 站扩展到知乎 / 小红书 / Twitter
 - **去中心化数据**:把数据存进用户本地 + 加密同步,不再依赖单机数据库
@@ -506,7 +506,7 @@ CREATE TABLE logs (
 1. 项目背景与目标
 2. 系统架构(详细图 + 文字说明)
 3. 技术选型与理由
-4. 核心功能实现(重点:OpenClaw Skill 设计、Gemini Prompt 工程)
+4. 核心功能实现(重点:OpenClaw Skill 设计、DeepSeek Prompt 工程)
 5. 数据库设计
 6. 关键代码片段(不超过 5 处)
 7. 测试与运行结果
@@ -522,7 +522,7 @@ CREATE TABLE logs (
 - OpenClaw 官方文档:<https://docs.openclaw.ai>
 - 中文教程(datawhale):<https://github.com/datawhalechina/hello-claw>
 - Awesome OpenClaw Skills:<https://github.com/topics/openclaw>
-- Gemini API 文档:<https://ai.google.dev/gemini-api/docs>
+- DeepSeek API 文档:<https://api-docs.deepseek.com>
 - FastAPI 官方教程:<https://fastapi.tiangolo.com/zh/tutorial/>
 - HTMX 官方文档:<https://htmx.org/docs/>
 - DaisyUI 组件库:<https://daisyui.com/components/>

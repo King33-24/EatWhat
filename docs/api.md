@@ -53,7 +53,7 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
 | 400 | 请求格式错（缺字段、字段类型错、JSON 解析失败） |
 | 404 | 资源不存在（report_id / cooldown_id 找不到） |
 | 422 | 参数语义错（unlock_at 早于 locked_at、interaction_type 不在允许集合） |
-| 500 | 服务器内部错（DB 不可用、Gemini 调用失败） |
+| 500 | 服务器内部错（DB 不可用、DeepSeek 调用失败） |
 
 ---
 
@@ -479,7 +479,7 @@ def err(message, status=400):
 
 ### 8.3 OpenClaw 触发约定
 
-后端**不直接调** Gemini。`POST /api/report/generate` 和 `POST /api/bookshelf/refresh` 的实现是：
+后端**不直接调** DeepSeek。`POST /api/report/generate` 和 `POST /api/bookshelf/refresh` 的实现是：
 1. 写一条"触发任务"记录到 SQLite 的某张协调表
 2. OpenClaw 端持续监听该表（轮询或文件信号）
 3. OpenClaw 跑完 Skill 后写入对应的 `reports` / `bookshelf_items` 表
