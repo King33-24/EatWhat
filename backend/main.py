@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 import config
 import database
 import models  # noqa: F401 — 必须导入,Base.metadata 才能收录所有表
-from routers import ingest, report, bookshelf, cooldown, logs
+from routers import ingest, import_url, report, bookshelf, cooldown, logs
 
 
 @asynccontextmanager
@@ -44,6 +44,7 @@ app.add_middleware(
 
 # 注册 API 路由(B-04~B-07 阶段逐个实现)
 app.include_router(ingest.router)
+app.include_router(import_url.router, prefix="/api")
 app.include_router(report.router, prefix="/api/report")
 app.include_router(bookshelf.router, prefix="/api/bookshelf")
 app.include_router(cooldown.router, prefix="/api/cooldown")

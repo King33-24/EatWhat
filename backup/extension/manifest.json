@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "问膳 EatWhat",
+  "description": "采集 B 站视频公开元数据并同步到问膳后端。",
+  "version": "0.1.0",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "https://*.bilibili.com/*",
+    "http://localhost:8000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.bilibili.com/video/*"
+      ],
+      "js": [
+        "logger.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "问膳 EatWhat",
+    "default_popup": "popup.html"
+  }
+}
