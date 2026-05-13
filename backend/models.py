@@ -6,17 +6,22 @@ from database import Base
 
 
 class RawObservation(Base):
-    """浏览器扩展上报的 B 站视频原始元数据。"""
+    """浏览器扩展/手动导入上报的小红书笔记原始数据。"""
     __tablename__ = "raw_observations"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    bvid = Column(String, nullable=False, index=True)
+    note_id = Column(String, nullable=False, index=True)  # 小红书笔记 ID
     title = Column(String)
-    uploader = Column(String)
-    tags = Column(Text)                       # JSON 数组字符串
-    description = Column(Text)
-    top_comments = Column(Text)               # JSON: [{author, content, likes}]
-    interaction_type = Column(String)         # view | like | favorite | coin
+    author = Column(String)                   # 作者昵称
+    tags = Column(Text)                       # JSON 数组字符串(话题标签)
+    content = Column(Text)                    # 笔记正文(主信息源)
+    images_count = Column(Integer, default=0)  # 图片数量(只数不抓内容)
+    likes_count = Column(Integer, default=0)   # 点赞数
+    collects_count = Column(Integer, default=0)  # 收藏数
+    comments_count = Column(Integer, default=0)  # 评论数
+    interaction_type = Column(String)         # view | like | collect | comment
+    dwell_seconds = Column(Integer)           # 累计有效停留秒数(上限 600)
+    source_channel = Column(String, default="extension")  # extension | manual_url
     observed_at = Column(DateTime, server_default=func.current_timestamp())
 
 

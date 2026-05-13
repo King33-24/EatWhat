@@ -47,7 +47,7 @@ W2 (5/15 周五 ~ 5/21 周四) 核心周
   目标:三件套全部实现并联调(报告 + 书架 + 冷静期)
 
 收尾 (5/22 周五 ~ 5/24 周日) 提交周
-  目标:Demo 数据 + 演示视频 + PPT + 技术报告书 + 夸克网盘提交
+  目标:Demo 数据 + 演示笔记 + PPT + 技术报告书 + 夸克网盘提交
 ```
 
 **每天**约 5-6 小时(2 人 × 5h × 16 天 ≈ 160 人时,vibe coding 下足够)。
@@ -159,16 +159,21 @@ T3 (6/6) 决赛日:现场答辩
 - **验收**:浏览器访问 8000 看到 OK,DBeaver 看到 5 张表
 - **AI 协作 tip**:Claude 写完后,让它解释每个文件的职责,你看一遍能跟上
 
-### B-04:实现 POST /ingest + 后端日志(5/11 上午)
+### B-04:实现 POST /ingest + 后端日志 + URL 补录(5/11 上午)
 - **谁做**:B 同学(让 Claude 写)
 - **难度**:★
-- **预计**:2h
-- **怎么做**:
+- **预计**:3h(含 B-04b)
+- **怎么做(B-04a: POST /ingest)**:
   1. 让 Claude 按 `docs/api.md §1.1` 写 `backend/routers/ingest.py`
   2. 让 Claude 写 `backend/logger.py`(loguru + 写 SQLite logs 表)
   3. 在 `main.py` 注册 router
   4. 用 curl 测试:`curl -X POST localhost:8000/ingest -H "Content-Type: application/json" -d '{...}'`(完整 JSON 见 api.md)
-- **验收**:curl 返回 success,DB raw_observations 表有记录,logs 表有日志
+- **怎么做(B-04b: POST /api/import-url,新增)**:
+  1. 让 Claude 写 `backend/routers/import_url.py`
+  2. 实现:校验 URL → httpx 抓小红书笔记页 → BeautifulSoup 解析 `title/author/content/tags/images_count/likes_count/collects_count/comments_count` → 入库,`source_channel='manual_url'`
+  3. `main.py` 注册 `app.include_router(import_url.router, prefix="/api")`
+  4. 在 `frontend/index.html` 加"补录笔记"输入框(或让 F 同学做)
+- **验收**:curl /ingest 返回 success;curl /import-url 返回 success(可用真实小红书 URL 测试);DB 有记录;logs 表有日志
 - **AI 协作 tip**:Claude 写完后让它告诉你 CORS 怎么配(扩展会跨域)
 
 ### F-01:Web Dashboard 骨架(5/10 ~ 5/11)
@@ -196,25 +201,26 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★★
 - **预计**:3h
 - **怎么做**:
-  1. 让 Copilot 按 ver2.md §7 在 `extension/` 写 `manifest.json`(Manifest V3,匹配 `*.bilibili.com/video/*`)
+  1. 让 Copilot 按 ver2.md §7 在 `extension/` 写 `manifest.json`(Manifest V3,匹配 `*.xiaohongshu.com/video/*`)
   2. 写 `content.js`(先放 `console.log("hello from content")`)
   3. 写 `background.js`(空骨架)
   4. 写 `popup.html` + `popup.js`(简单弹窗,一个按钮)
   5. Chrome 打开 `chrome://extensions/` → 开发者模式 → 加载已解压扩展(选 `extension/` 文件夹)
-  6. 打开 B 站视频页 → F12 → Console 看到 hello
-- **验收**:Chrome 加载扩展成功,B 站页面 F12 控制台有 hello
+  6. 打开 小红书笔记页 → F12 → Console 看到 hello
+- **验收**:Chrome 加载扩展成功,小红书页面 F12 控制台有 hello
 - **AI 协作 tip**:Copilot 在 Manifest V3 上偶尔会用 V2 老语法,看到 `background_page` 这种立刻让它改
 
-### E-02:Content Script 抓 B 站 DOM(5/12)
+### E-02:Content Script 抓 小红书 DOM(5/12)
 - **谁做**:F 同学
-- **难度**:★★★(B 站 DOM 选择器要试)
+- **难度**:★★★(小红书 DOM 选择器要试)
 - **预计**:5h
 - **怎么做**:
-  1. 让 Copilot 写 `extractVideoData()` 函数:抓 bvid/title/uploader/tags/description/top_comments
-  2. 在 B 站视频页 F12 Console 里粘贴函数测试,看返回值
+  1. 让 Copilot 写 `extractNoteData()` 函数:抓 note_id/title/author/tags/content/images_count/likes_count/collects_count/comments_count
+     - ⚠️ **注意**:`content` 是笔记正文(远比 B 站 description 长,是主信息源);`images_count` 只数不抓图;小红书评论区是 Shadow DOM,**不抓 top_comments**
+  2. 在 小红书笔记页 F12 Console 里粘贴函数测试,看返回值
   3. 选择器找不到的字段就 F12 Elements 用 Ctrl+Shift+C 点元素看 class
-  4. 反复迭代,在 3 个不同视频页都能正确返回
-- **验收**:3 个视频页运行 `extractVideoData()` 都能返回完整字段
+  4. 反复迭代,在 3 个不同笔记页都能正确返回
+- **验收**:3 个笔记页运行 `extractVideoData()` 都能返回完整字段
 - **卡住怎么办**:把抓不到的元素 HTML 片段贴给 Claude,让它给你 CSS 选择器
 
 ### E-03:Content → Background → FastAPI 全链路(5/13)
@@ -222,11 +228,13 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★★
 - **预计**:3h
 - **怎么做**:
-  1. `content.js` 抓完数据后 `chrome.runtime.sendMessage(...)`
+  1. `content.js` 抓完数据后 `chrome.runtime.sendMessage({...payload})`
+     - Payload 字段按 `docs/api.md §1.1` 最新版:`note_id/title/author/tags/content/images_count/likes_count/collects_count/comments_count/interaction_type/dwell_seconds/source_channel`
+     - `source_channel` 固定填 `'extension'`
   2. `background.js` 接到 message 后 `fetch('http://localhost:8000/ingest', ...)`
   3. B 同学的 FastAPI 必须开着
-  4. 测:打开 B 站视频页 → DB raw_observations 有记录
-- **验收**:B 站打开视频 → 数据库出现记录(DBeaver 查)
+  4. 测:打开 小红书笔记页 → DB raw_observations 有记录(含新增字段)
+- **验收**:小红书打开笔记 → 数据库出现记录(DBeaver 查)
 - **CORS 注意**:浏览器报 CORS 错让 B 同学加 CORSMiddleware(放行 `chrome-extension://*`)
 
 ### E-04:扩展 popup + 右键菜单(5/14 上午)
@@ -234,11 +242,37 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★★
 - **预计**:3h
 - **怎么做**:
-  1. `popup.html`:DaisyUI 简洁弹窗,有"采集本视频"按钮
+  1. `popup.html`:DaisyUI 简洁弹窗,有"采集本笔记"按钮
   2. `popup.js`:点按钮 → 向当前 tab 发消息触发 content.js 重抓
   3. `background.js`:注册右键菜单"存入冷静期盒子"(对 link 触发,POST /api/cooldown)
-  4. 测试:点扩展图标 → 弹窗 → 点采集 → 成功提示;在视频链接上右键 → 看到菜单项
+  4. 测试:点扩展图标 → 弹窗 → 点采集 → 成功提示;在笔记链接上右键 → 看到菜单项
 - **验收**:popup 和右键菜单都能用
+
+### E-05:用户主动动作 hook(点赞/收藏/评论)—— 新增(v4)
+- **谁做**:F 同学(Copilot 写)
+- **难度**:★★
+- **预计**:2h
+- **怎么做**:
+  1. `content.js` 增加全局 click 监听:用 `e.target.closest('button,div,span')` 识别点赞/收藏/评论按钮
+  2. 通过按钮的 class 或 aria-label 判断动作类型:`like` / `collect` / `comment`
+  3. 触发后 `chrome.runtime.sendMessage({type:'user_action', note_id, action_type})`
+  4. `background.js` 收到后 `POST /ingest` 写入,`interaction_type` 设为对应动作
+  5. **注意**:小红书 class 名经常变,先用 F12 看当前 class,再让 Copilot 写选择器;决赛前可能要迭代一次
+- **验收**:在小红书笔记页点点赞 → DB `raw_observations` 出现一条 `interaction_type='like'` 的记录
+- **卡住怎么办**:class 找不到时,用 `MutationObserver` 监听点赞按钮出现;或改用 `document.querySelectorAll('[aria-label*="赞"]')` 做兜底
+
+### E-06:Dwell time(停留时间追踪)—— 新增(v4)
+- **谁做**:F 同学(Copilot 写)
+- **难度**:★
+- **预计**:1.5h
+- **怎么做**:
+  1. `content.js` 在页面 load 时 `let startTime = Date.now(); let totalActiveMs = 0;`
+  2. 监听 `document.visibilitychange`:切走 Tab 时累加并暂停计时;切回时重置 startTime
+  3. 监听 `window.beforeunload`:页面关闭或跳走时累加最终时长
+  4. 用 `navigator.sendBeacon('http://localhost:8000/ingest', JSON.stringify(payload))` 上报 — beacon 保证即使页面关闭也能送达
+  5. Payload 含 `note_id` + `interaction_type='view'` + `dwell_seconds=Math.min(Math.round(totalActiveMs/1000), 600)`(上限 600s)
+- **验收**:在小红书笔记页停留 30 秒后切走 → DB 该 note 的 `dwell_seconds` 在 25-35 秒之间(有网络延迟容差)
+- **已知边缘情况**:人离开电脑不关页面 → `visibilitychange` 不切走时会被多计;上限 600s 截断可部分缓解;决赛 PPT 里主动提及此限制(见 ver3.md §9.X)
 
 ### O-01:写第一个 OpenClaw Skill(Hello)(5/13 ~ 5/14)
 - **谁做**:B 同学(让 Claude 写)
@@ -257,7 +291,7 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★★
 - **预计**:2h
 - **怎么做**:
-  1. 完整走一遍:B 站视频页 → 扩展抓 → FastAPI 收 → SQLite 存 → 前端 Dashboard 主页能显示"已采集 N 条"
+  1. 完整走一遍:小红书笔记页 → 扩展抓 → FastAPI 收 → SQLite 存 → 前端 Dashboard 主页能显示"已采集 N 条"
   2. 检查双方 GitHub 都已 push
   3. 决策:OpenClaw 跑通了吗?
      - **跑通了**:W2 按计划做 analyze_cognition Skill
@@ -270,8 +304,8 @@ T3 (6/6) 决赛日:现场答辩
 - [ ] FastAPI 跑起来 8000 端口能访问
 - [ ] OpenClaw WebChat 能聊天(或降级到纯 Python 调 DeepSeek)
 - [ ] SQLite 5 张表建好
-- [ ] 扩展能加载,B 站页面能抓数据
-- [ ] **全链路:B 站采集 → FastAPI → SQLite,通!**
+- [ ] 扩展能加载,小红书页面能抓数据
+- [ ] **全链路:小红书采集 → FastAPI → SQLite,通!**
 - [ ] 前端 Dashboard 主页 + 4 个空白页能跳转
 
 ---
@@ -284,7 +318,7 @@ T3 (6/6) 决赛日:现场答辩
 - **预计**:8h(分散 3 天)
 - **怎么做**:
   1. **5/15 上午**:让 Claude 帮你写 prompt 草稿(参考 ver2.md §2.1 报告四板块)
-  2. **5/15 下午**:在 DeepSeek Playground(<https://platform.deepseek.com/playground>)或用 curl 脚本喂 20-30 条模拟视频数据测试 prompt,迭代到输出稳定 JSON
+  2. **5/15 下午**:在 DeepSeek Playground(<https://platform.deepseek.com/playground>)或用 curl 脚本喂 20-30 条模拟笔记数据测试 prompt,迭代到输出稳定 JSON
   3. **5/16**:把最终 prompt 嵌入 SKILL.md 的 instructions 段;Skill 工作流:读 raw_observations 近 7 天 → 调 DeepSeek → 解析 JSON → 写 reports 表
   4. **5/17**:WebChat 测试触发,看 reports 表新增记录
 - **验收**:WebChat 输入"生成本周认知体检报告"→ reports 表新增一条 + JSON 各字段完整
@@ -328,7 +362,7 @@ T3 (6/6) 决赛日:现场答辩
 - **怎么做**:
   1. **5/17**:用 DaisyUI 排好布局(标题 + 兴趣地图区 + 观点光谱区 + 盲区卡片 + 情绪卡片)
   2. **5/18**:`js/report.js` 调 `/api/report/latest`,把 JSON 填到 DOM;ECharts 画饼图(interest_map)和条形图(opinion_spectrum)
-  3. **5/19**:盲区卡片(DaisyUI card)、情绪卡片;空数据态("还没有报告,先去 B 站看看吧"按钮 → htmx 触发 generate)
+  3. **5/19**:盲区卡片(DaisyUI card)、情绪卡片;空数据态("还没有报告,先去 小红书看看吧"按钮 → htmx 触发 generate)
   4. 配色:浅灰背景 `#f8f9fa` + 白卡 + 强调色 `#2d6a4f` 深绿 + 警告色 `#c0392b` 红
 - **验收**:报告页能完整显示四板块,数据来自真实 API
 - **AI 协作 tip**:让 Copilot 写 ECharts 时给它一个 sample JSON(从 api.md 复制),它写得更准
@@ -378,7 +412,7 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★★
 - **预计**:3h
 - **怎么做**:
-  1. F 同学用扩展采集 10-20 个 B 站视频
+  1. F 同学用扩展采集 10-20 个 小红书笔记
   2. 触发报告生成 + 书架刷新
   3. 刷新报告页和书架页 → 看效果
   4. 反复改 prompt:不准就让 Claude 改,改完再生成
@@ -418,7 +452,7 @@ T3 (6/6) 决赛日:现场答辩
   2. 截 4-6 张关键截图存 `demo/screenshots/`
   3. 不要再加新功能,只修明显丑/不能用的地方
 
-### D-01:演示视频录制(5/23)
+### D-01:演示笔记录制(5/23)
 - **谁做**:F 同学主操,B 同学旁白(可选)
 - **难度**:★
 - **预计**:3h
@@ -432,7 +466,7 @@ T3 (6/6) 决赛日:现场答辩
   2. 用 Ubuntu 内置录屏(GNOME Screenshot)或 OBS Studio 录
   3. 录 3-5 遍选最好的
   4. 存 `demo/eatwhat_demo.mp4`(.gitignore 不传 GitHub,只上传到夸克网盘)
-- **验收**:3-5 分钟视频,清晰、流畅,主要功能都演示了
+- **验收**:3-5 分钟笔记,清晰、流畅,主要功能都演示了
 
 ### D-02:答辩 PPT(5/23 ~ 5/24)
 - **谁做**:双方
@@ -465,7 +499,7 @@ T3 (6/6) 决赛日:现场答辩
   1. `git push` 一次最终代码到 GitHub(确保 README 完整)
   2. 打包:`eatwhat_submission_v1.zip` 含:
      - `eatwhat_pitch.pdf`(PPT)
-     - `eatwhat_demo.mp4`(视频)
+     - `eatwhat_demo.mp4`(笔记)
      - `tech_report.pdf`
      - `screenshots/`
      - `seed_data.sql`
@@ -476,7 +510,7 @@ T3 (6/6) 决赛日:现场答辩
 
 ### 收尾周末检查清单
 - [ ] Demo 数据导入后报告好看
-- [ ] 演示视频录好,不超过 5 分钟
+- [ ] 演示笔记录好,不超过 5 分钟
 - [ ] PPT 完成,6-8 页
 - [ ] 技术报告书完成
 - [ ] 截图齐全
@@ -515,7 +549,7 @@ T3 (6/6) 决赛日:现场答辩
 
 ### 6/6 决赛日
 - 准备:笔记本(双备份)、HDMI 转换头、移动电源
-- 演示视频提前下载到本地(不依赖网络)
+- 演示笔记提前下载到本地(不依赖网络)
 - 心态:讲故事比讲技术更重要
 
 ---

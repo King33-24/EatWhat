@@ -61,22 +61,25 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
 
 ### 1.1 `POST /ingest`
 
-浏览器扩展上报 B 站视频公开元数据。
+浏览器扩展上报 小红书笔记公开元数据。
 
 **调用方**：`extension/background.js`
 
 **请求体**：
 ```json
 {
-  "bvid": "BV1xx411x7xx",
+  "note_id": "64a7b3a200000000000005d",
   "title": "GPT-5 发布会全程",
-  "uploader": "AI 资讯",
+  "author": "AI 资讯",
   "tags": ["AI", "GPT", "发布会"],
-  "description": "OpenAI 发布 GPT-5 模型...",
-  "top_comments": [
-    {"author": "用户A", "content": "这次更新太强了", "likes": 1024}
-  ],
-  "interaction_type": "view"
+  "content": "OpenAI 发布 GPT-5 模型...",
+  "images_count": 9,
+  "likes_count": 2048,
+  "collects_count": 512,
+  "comments_count": 128,
+  "interaction_type": "view",
+  "dwell_seconds": 45,
+  "source_channel": "extension"
 }
 ```
 
@@ -84,13 +87,18 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `bvid` | string | ✅ | B 站视频唯一 ID（格式 `BV` + 10 位字符） |
-| `title` | string | ✅ | 视频标题 |
-| `uploader` | string | ✅ | UP 主名 |
-| `tags` | string[] | ❌ | 标签数组，可空 |
-| `description` | string | ❌ | 视频简介，可空 |
-| `top_comments` | object[] | ❌ | 高赞评论数组（最多 5 条），每项 `{author, content, likes}` |
-| `interaction_type` | string | ✅ | 取值：`view` / `like` / `favorite` / `coin` |
+| `note_id` | string | ✅ | 小红书笔记唯一 ID（24 位 hex） |
+| `title` | string | ✅ | 笔记标题 |
+| `author` | string | ✅ | 作者昵称 |
+| `tags` | string[] | ❌ | 话题标签数组，可空 |
+| `content` | string | ✅ | 笔记正文（主信息源） |
+| `images_count` | int | ❌ | 笔记图片数量，可空 |
+| `likes_count` | int | ❌ | 点赞数，可空 |
+| `collects_count` | int | ❌ | 收藏数，可空 |
+| `comments_count` | int | ❌ | 评论数，可空 |
+| `interaction_type` | string | ✅ | 取值：`view` / `like` / `collect` / `comment` |
+| `dwell_seconds` | int | ❌ | 用户在该笔记页的有效停留秒数（上限 600），可空 |
+| `source_channel` | string | ❌ | `'extension'`（扩展自动采集） / `'manual_url'`（用户粘贴补录），默认 `extension` |
 
 **成功响应**：
 ```json
@@ -105,9 +113,43 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
 ```
 
 **错误情况**：
-- 400：缺 `bvid` / `title` / `uploader` / `interaction_type`
+- 400：缺 `note_id` / `title` / `author` / `interaction_type`
 - 422：`interaction_type` 不在允许集合
 - 500：DB 写入失败
+
+---
+
+### 1.2 `POST /api/import-url`（新增，v4）
+
+用户从小红书 App 复制单条笔记链接,粘贴到 Web Dashboard 补录。
+
+**调用方**：`frontend/index.html` 上的"补录笔记"输入框
+
+**请求体**：
+```json
+{
+  "url": "https://www.xiaohongshu.com/explore/64a7b3a200000000000005d"
+}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `url` | string | ✅ | 小红书笔记 URL（`https://www.xiaohongshu.com/explore/xxx`） |
+
+**后端处理**：
+1. 校验 URL 是否合法（`xiaohongshu.com/explore/` 前缀）
+2. 用 `httpx` 抓取该 URL 的 Web 版页面
+3. 用 `BeautifulSoup` 解析 `title` / `author` / `content` / `tags` / 互动数据
+4. 写入 `raw_observations` 表，`source_channel = 'manual_url'`
+
+**成功响应**：同 `POST /ingest` 成功响应格式
+
+**错误情况**：
+- 400：`url` 不是合法 URL 或不是小红书域名
+- 422：抓取到的页面信息不足以入库（缺 `note_id` / `title` / `author`）
+- 500：后端抓取失败（小红书反爬/超时）
 
 ---
 
@@ -133,11 +175,11 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
       {"topic": "AI", "weight": 0.45, "sample_videos": ["GPT-5 发布", "Claude 5 评测"]}
     ],
     "opinion_spectrum": [
-      {"issue": "AI 取代人工", "position": "支持", "evidence": "5 个视频均认为 AI 将取代..."}
+      {"issue": "AI 取代人工", "position": "支持", "evidence": "5 个笔记均认为 AI 将取代..."}
     ],
     "blind_spots": [
       {
-        "description": "你这周看了 8 个数字游民视频，但没有任何内容讨论可持续性风险",
+        "description": "你这周看了 8 个数字游民笔记，但没有任何内容讨论可持续性风险",
         "missing_perspective": "可持续性",
         "sample_count": 8
       }
@@ -272,9 +314,9 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
   "data": [
     {
       "id": 5,
-      "url": "https://www.bilibili.com/video/BV1xx",
+      "url": "https://www.xiaohongshu.com/video/64a7b3a200000000000005d",
       "title": "标题",
-      "user_note": "我知道我又在刷无聊视频",
+      "user_note": "我知道我又在刷无聊笔记",
       "locked_at": "2026-05-08T15:00:00+08:00",
       "unlock_at": "2026-05-15T15:00:00+08:00",
       "status": "locked",
