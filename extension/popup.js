@@ -37,7 +37,7 @@
 
   function sendCollectMessage(tabId) {
     return new Promise(function (resolve, reject) {
-      chrome.tabs.sendMessage(tabId, { type: 'collect_current_video' }, function (response) {
+      chrome.tabs.sendMessage(tabId, { type: 'collect_current_note' }, function (response) {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
           return;
@@ -55,8 +55,8 @@
     try {
       setStatus('采集中...', 'info');
       var tab = await queryActiveTab();
-      if (!/^https?:\/\/[^/]*bilibili\.com\/video\//i.test(tab.url || '')) {
-        throw new Error('请先切到 B 站视频页');
+      if (!/^https?:\/\/[^/]*xiaohongshu\.com\/explore\//i.test(tab.url || '')) {
+        throw new Error('请先切到小红书笔记页');
       }
       var result = await sendCollectMessage(tab.id);
       setStatus('采集成功，已上报后端', 'success');

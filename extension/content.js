@@ -3,8 +3,13 @@
 (function attachContentCollector(global) {
   var extension = global.EatWhatExtension || {};
   var logger = extension.logger;
-  var latestBvid = null;
+  var latestNoteId = null;
   var collectLock = false;
+  var dwellMs = 0;
+  var activeSince = document.visibilityState === 'visible' ? Date.now() : 0;
+  var lastInteractionAt = 0;
+  var lastInteractionType = '';
+  var debugPayloadLogEnabled = Boolean(global.EatWhatConfig && global.EatWhatConfig.debugPayload);
 
   function normalizeText(raw) {
     return String(raw || '').replace(/\s+/g, ' ').trim();
@@ -25,297 +30,474 @@
     return digits ? Math.round(Number(digits[0])) : 0;
   }
 
-  function collectSearchRoots() {
-    var roots = [document];
-    var walker = document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT);
-    while (walker.nextNode()) {
-      var node = walker.currentNode;
-      if (node.shadowRoot) {
-        roots.push(node.shadowRoot);
-      }
-    }
-    return roots;
-  }
-
-  function queryAllDeep(selector) {
-    var roots = collectSearchRoots();
-    var items = [];
-    roots.forEach(function (root) {
-      root.querySelectorAll(selector).forEach(function (element) {
-        items.push(element);
+  function queryUniqueElements(selectors) {
+    var seen = new Set();
+    var result = [];
+    selectors.forEach(function (selector) {
+      document.querySelectorAll(selector).forEach(function (element) {
+        if (seen.has(element)) {
+          return;
+        }
+        seen.add(element);
+        result.push(element);
       });
     });
-    return items;
+    return result;
+  }
+
+  function isElementVisible(element) {
+    if (!element) {
+      return false;
+    }
+    return Boolean(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+  }
+
+  function getScriptTexts() {
+    var scripts = document.querySelectorAll('script');
+    var texts = [];
+    scripts.forEach(function (script) {
+      var text = script.textContent || '';
+      if (text) {
+        texts.push(text);
+      }
+    });
+    return texts;
+  }
+
+  function extractScriptNumberByKeys(keys) {
+    var scripts = getScriptTexts();
+    for (var i = 0; i < scripts.length; i += 1) {
+      for (var j = 0; j < keys.length; j += 1) {
+        var pattern = new RegExp('"' + keys[j] + '"\\s*:\\s*"?([0-9.,万亿]+)"?', 'i');
+        var matched = scripts[i].match(pattern);
+        if (!matched || !matched[1]) {
+          continue;
+        }
+        var value = parseCount(matched[1]);
+        if (value >= 0) {
+          return value;
+        }
+      }
+    }
+    return -1;
+  }
+
+  function extractScriptNumberNearNote(keys, noteId) {
+    if (!noteId) {
+      return -1;
+    }
+    var scripts = getScriptTexts();
+    for (var i = 0; i < scripts.length; i += 1) {
+      if (scripts[i].indexOf(noteId) < 0) {
+        continue;
+      }
+      for (var j = 0; j < keys.length; j += 1) {
+        var nearAfter = new RegExp(
+          '"' + noteId + '"[\\s\\S]{0,4000}"' + keys[j] + '"\\s*:\\s*"?([0-9.,万亿]+)"?',
+          'i'
+        );
+        var nearBefore = new RegExp(
+          '"' + keys[j] + '"\\s*:\\s*"?([0-9.,万亿]+)"?[\\s\\S]{0,4000}"' + noteId + '"',
+          'i'
+        );
+        var matched = scripts[i].match(nearAfter) || scripts[i].match(nearBefore);
+        if (!matched || !matched[1]) {
+          continue;
+        }
+        return parseCount(matched[1]);
+      }
+    }
+    return -1;
+  }
+
+  function extractNumberToken(text) {
+    var normalized = normalizeText(text);
+    if (!normalized) {
+      return -1;
+    }
+    var matched = normalized.match(/[0-9]+(?:\.[0-9]+)?(?:万|亿)?/);
+    if (!matched || !matched[0]) {
+      return -1;
+    }
+    return parseCount(matched[0]);
+  }
+
+  function extractCountFromElements(elements) {
+    var found = false;
+    for (var i = 0; i < elements.length; i += 1) {
+      if (!isElementVisible(elements[i])) {
+        continue;
+      }
+      var sourceTexts = [
+        normalizeText(elements[i].getAttribute && elements[i].getAttribute('aria-label')),
+        normalizeText(elements[i].getAttribute && elements[i].getAttribute('title')),
+        normalizeText(elements[i].textContent)
+      ];
+      var preferredCountNode = elements[i].querySelector('[class*="count"], [class*="num"], [data-count]');
+      if (preferredCountNode) {
+        sourceTexts.unshift(normalizeText(preferredCountNode.textContent));
+      }
+      for (var j = 0; j < sourceTexts.length; j += 1) {
+        if (!sourceTexts[j]) {
+          continue;
+        }
+        var count = extractNumberToken(sourceTexts[j]);
+        if (count >= 0) {
+          found = true;
+          return count;
+        }
+      }
+    }
+    return found ? 0 : -1;
+  }
+
+  function extractActionCount(type) {
+    var selectorMap = {
+      like: [
+        '[class*="like"][class*="wrapper"]',
+        '[class*="like"] [class*="count"]',
+        '[class*="like"] [class*="num"]',
+        '[class*="like"][role="button"]',
+        '[data-testid*="like"]',
+        '[aria-label*="赞"]'
+      ],
+      collect: [
+        '[class*="collect"][class*="wrapper"]',
+        '[class*="collect"] [class*="count"]',
+        '[class*="collect"] [class*="num"]',
+        '[class*="collect"][role="button"]',
+        '[data-testid*="collect"]',
+        '[aria-label*="收藏"]'
+      ],
+      comment: [
+        '[class*="comment"][class*="wrapper"]',
+        '[class*="comment"] [class*="count"]',
+        '[class*="comment"] [class*="num"]',
+        '[class*="comment"][role="button"]',
+        '[data-testid*="comment"]',
+        '[aria-label*="评论"]'
+      ]
+    };
+    var typeMatcherMap = {
+      like: /like|点赞|喜欢|赞/i,
+      collect: /collect|收藏/i,
+      comment: /comment|评论|留言/i
+    };
+    var scriptKeyMap = {
+      like: ['likes_count', 'liked_count', 'likedCount', 'like_count', 'likeCount'],
+      collect: ['collects_count', 'collected_count', 'collectedCount', 'collect_count', 'collectCount'],
+      comment: ['comments_count', 'comment_count', 'commentCount']
+    };
+    var currentNoteId = extractNoteIdFromUrl(global.location.href);
+    var fromScriptNear = extractScriptNumberNearNote(scriptKeyMap[type] || [], currentNoteId);
+    if (fromScriptNear >= 0) {
+      return fromScriptNear;
+    }
+    var fromScript = extractScriptNumberByKeys(scriptKeyMap[type] || []);
+    if (fromScript >= 0) {
+      return fromScript;
+    }
+    var visibleActionElements = queryUniqueElements(selectorMap[type] || []).filter(function (element) {
+      if (!isElementVisible(element)) {
+        return false;
+      }
+      return typeMatcherMap[type].test(
+        normalizeText(
+          (element.getAttribute && element.getAttribute('aria-label')) + ' ' +
+          (element.getAttribute && element.getAttribute('title')) + ' ' +
+          (element.getAttribute && element.getAttribute('data-testid')) + ' ' +
+          (element.className && String(element.className)) + ' ' +
+          (element.textContent || '')
+        )
+      );
+    });
+    var fromDom = extractCountFromElements(visibleActionElements);
+    return fromDom >= 0 ? fromDom : 0;
+  }
+
+  function extractImagesCount() {
+    var imageSelectors = [
+      '.note-content img',
+      '[class*="note-content"] img',
+      '[class*="swiper-slide"] img',
+      '[class*="note-slider"] img'
+    ];
+    var images = queryUniqueElements(imageSelectors);
+    var uniqueUrls = [];
+    images.forEach(function (image) {
+      var src = normalizeText(image.currentSrc || image.src || '');
+      var marker = (src + ' ' + (image.className || '') + ' ' + (image.alt || '')).toLowerCase();
+      if (!src) {
+        return;
+      }
+      if (/avatar|icon|emoji|logo/.test(marker)) {
+        return;
+      }
+      if (uniqueUrls.indexOf(src) >= 0) {
+        return;
+      }
+      uniqueUrls.push(src);
+    });
+    return uniqueUrls.length;
   }
 
   function textFromSelectors(selectors) {
-    var roots = collectSearchRoots();
     for (var i = 0; i < selectors.length; i += 1) {
-      for (var j = 0; j < roots.length; j += 1) {
-        var element = roots[j].querySelector(selectors[i]);
-        var text = normalizeText(element && element.textContent);
-        if (text) {
-          return text;
+      var elements = document.querySelectorAll(selectors[i]);
+      for (var j = 0; j < elements.length; j += 1) {
+        if (!isElementVisible(elements[j])) {
+          continue;
+        }
+        var visibleText = normalizeText(elements[j].textContent);
+        if (visibleText) {
+          return visibleText;
+        }
+      }
+      for (var k = 0; k < elements.length; k += 1) {
+        var anyText = normalizeText(elements[k].textContent);
+        if (anyText) {
+          return anyText;
         }
       }
     }
     return '';
   }
 
-  function textFromSelectorsInNode(node, selectors) {
-    for (var i = 0; i < selectors.length; i += 1) {
-      var element = node.querySelector(selectors[i]);
-      var text = normalizeText(element && element.textContent);
-      if (text) {
-        return text;
+  function extractNoteIdFromUrl(url) {
+    var matched = String(url || '').match(/\/(?:explore|discovery\/item)\/([0-9a-f]{24})/i);
+    return matched ? matched[1] : '';
+  }
+
+  function parseTagsFromContent(contentText) {
+    var tags = [];
+    String(contentText || '').replace(/#([^\s#]+)/g, function (_, tag) {
+      if (tag && tags.indexOf(tag) === -1) {
+        tags.push(tag);
       }
-    }
-    return '';
-  }
-
-  function parseDescriptionFromLdJson() {
-    var scripts = document.querySelectorAll('script[type="application/ld+json"]');
-    for (var i = 0; i < scripts.length; i += 1) {
-      try {
-        var payload = JSON.parse(scripts[i].textContent || '{}');
-        var list = Array.isArray(payload) ? payload : [payload];
-        for (var j = 0; j < list.length; j += 1) {
-          var item = list[j];
-          var text = normalizeText(item && item.description);
-          if (text) {
-            return text;
-          }
-        }
-      } catch (error) {
-        console.debug('[EatWhat][extension][content][DEBUG] ld+json 解析失败', {
-          error: error.message
-        });
-      }
-    }
-    return '';
-  }
-
-  function getInitialState() {
-    var state = global.__INITIAL_STATE__;
-    if (state && typeof state === 'object') {
-      return state;
-    }
-    return null;
-  }
-
-  function extractDescriptionFromInitialState() {
-    var state = getInitialState();
-    if (!state || !state.videoData) {
-      return '';
-    }
-    var text = normalizeText(state.videoData.desc);
-    if (text) {
-      return text;
-    }
-    if (Array.isArray(state.videoData.desc_v2)) {
-      var merged = normalizeText(
-        state.videoData.desc_v2
-          .map(function (item) {
-            return item && (item.raw_text || item.text || '');
-          })
-          .join(' ')
-      );
-      if (merged) {
-        return merged;
-      }
-    }
-    return '';
-  }
-
-  function extractDescription() {
-    var fromDom = textFromSelectors([
-      '#v_desc .desc-info-text',
-      '.video-desc-container .desc-info-text',
-      '.desc-info-text',
-      '.video-desc',
-      '.desc',
-      '[data-testid="video-desc"]'
-    ]);
-    if (fromDom) {
-      return fromDom;
-    }
-
-    var fromMeta = normalizeText(
-      (document.querySelector('meta[property="og:description"]') || {}).content ||
-      (document.querySelector('meta[name="description"]') || {}).content
-    );
-    if (fromMeta) {
-      return fromMeta;
-    }
-
-    var fromLdJson = parseDescriptionFromLdJson();
-    if (fromLdJson) {
-      return fromLdJson;
-    }
-
-    return extractDescriptionFromInitialState();
+      return _;
+    });
+    return tags;
   }
 
   function extractTags() {
-    var nodes = queryAllDeep(
-      '.video-tag-container a, .tag-link, .video-tag-list a, .topic-link, .tag-panel .tag'
-    );
+    var nodes = document.querySelectorAll('a[href*="search_result"], [class*="tag"], [data-tag]');
     var tags = [];
     nodes.forEach(function (node) {
       var text = normalizeText(node.textContent).replace(/^#/, '');
-      if (text && tags.indexOf(text) === -1) {
+      if (!text || text.length > 20 || tags.indexOf(text) >= 0) {
+        return;
+      }
+      if (text === '作者' || text.indexOf('作者') >= 0) {
+        return;
+      }
+      if (/^[\u4e00-\u9fa5A-Za-z0-9_]+$/.test(text)) {
         tags.push(text);
       }
     });
     return tags.slice(0, 12);
   }
 
-  function normalizeCommentFromState(rawComment) {
-    var author = normalizeText(
-      (rawComment && rawComment.member && rawComment.member.uname) ||
-      (rawComment && rawComment.user && rawComment.user.name) ||
-      (rawComment && rawComment.uname)
-    );
-    var content = normalizeText(
-      (rawComment && rawComment.content && rawComment.content.message) ||
-      (rawComment && rawComment.content && rawComment.content.text) ||
-      (rawComment && rawComment.message)
-    );
-    var likes = parseCount(
-      (rawComment && rawComment.like) ||
-      (rawComment && rawComment.likes) ||
-      0
-    );
-    if (!author || !content) {
-      return null;
+  function triggerInteractionCapture(interactionType, triggerSource) {
+    var now = Date.now();
+    if (interactionType === lastInteractionType && now - lastInteractionAt < 700) {
+      return;
     }
-    return {
-      author: author,
-      content: content,
-      likes: likes
+    lastInteractionType = interactionType;
+    lastInteractionAt = now;
+    console.log('[EatWhat][content][interaction]', interactionType);
+    collectAndIngest(triggerSource, interactionType).catch(async function (error) {
+      if (logger) {
+        await logger.log('content', 'WARN', '用户动作采集失败', {
+          interaction_type: interactionType,
+          trigger_source: triggerSource,
+          error: error.message
+        });
+      }
+    });
+  }
+
+  function bindInteractionButtons() {
+    var buttonSelectorMap = {
+      like: [
+        'button[aria-label*="赞"]',
+        '[role="button"][aria-label*="赞"]',
+        '[data-testid*="like"]',
+        '[class*="like"][class*="wrapper"]'
+      ],
+      collect: [
+        'button[aria-label*="收藏"]',
+        '[role="button"][aria-label*="收藏"]',
+        '[data-testid*="collect"]',
+        '[class*="collect"][class*="wrapper"]'
+      ],
+      comment: [
+        'button[aria-label*="评论"]',
+        '[role="button"][aria-label*="评论"]',
+        '[data-testid*="comment"]',
+        '[class*="comment"][class*="wrapper"]'
+      ]
     };
-  }
-
-  function extractTopCommentsFromInitialState() {
-    var state = getInitialState();
-    if (!state) {
-      return [];
-    }
-    var candidates = [];
-    if (state.reply && Array.isArray(state.reply.replyList)) {
-      candidates = state.reply.replyList;
-    } else if (Array.isArray(state.replyList)) {
-      candidates = state.replyList;
-    } else if (state.commentData && Array.isArray(state.commentData.topReplies)) {
-      candidates = state.commentData.topReplies;
-    }
-    return candidates
-      .map(normalizeCommentFromState)
-      .filter(function (item) {
-        return Boolean(item);
-      })
-      .slice(0, 5);
-  }
-
-  function extractTopCommentsFromDom() {
-    var items = queryAllDeep(
-      '#commentapp .reply-item, .reply-list .reply-item, .comment-list .reply-item, .reply-wrap, .comment-item'
-    );
-    var comments = [];
-    items.forEach(function (item) {
-      if (comments.length >= 5) {
-        return;
-      }
-      var author = textFromSelectorsInNode(item, [
-        '.user-name',
-        '.sub-user-name',
-        '.user-name-text',
-        '.name',
-        '.username',
-        '.reply-user-name'
-      ]);
-      var content = textFromSelectorsInNode(item, [
-        '.reply-content',
-        '.reply-content-text',
-        '.content-warp',
-        '.text',
-        '.content',
-        '.reply-main',
-        '.comment-content'
-      ]);
-      var likesText = textFromSelectorsInNode(item, [
-        '.like-count',
-        '.reply-like span',
-        '.count',
-        '.like-num',
-        '.up-count',
-        '.like'
-      ]);
-      if (!author || !content) {
-        return;
-      }
-      comments.push({
-        author: author,
-        content: content,
-        likes: parseCount(likesText)
+    Object.keys(buttonSelectorMap).forEach(function (type) {
+      var elements = queryUniqueElements(buttonSelectorMap[type]);
+      elements.forEach(function (element) {
+        if (!isElementVisible(element)) {
+          return;
+        }
+        if (element.dataset && element.dataset.eatwhatBound === '1') {
+          return;
+        }
+        if (element.dataset) {
+          element.dataset.eatwhatBound = '1';
+        }
+        element.addEventListener('click', function () {
+          var clickMarker = normalizeText(
+            (element.getAttribute && element.getAttribute('aria-label')) + ' ' +
+            (element.getAttribute && element.getAttribute('title')) + ' ' +
+            (element.getAttribute && element.getAttribute('data-testid')) + ' ' +
+            (element.className && String(element.className)) + ' ' +
+            (element.textContent || '')
+          ).toLowerCase();
+          if (shouldSkipInteraction(type, clickMarker)) {
+            return;
+          }
+          triggerInteractionCapture(type, 'interaction_bound_click');
+        }, true);
       });
     });
-    return comments;
   }
 
-  function extractTopComments() {
-    var fromDom = extractTopCommentsFromDom();
-    if (fromDom.length > 0) {
-      return fromDom;
+  function shouldSkipInteraction(type, marker) {
+    if (type === 'like') {
+      return /取消赞|取消点赞|已赞|unlike|liked/.test(marker);
     }
-    return extractTopCommentsFromInitialState();
+    if (type === 'collect') {
+      return /取消收藏|已收藏|uncollect|collected/.test(marker);
+    }
+    return false;
   }
 
-  function extractBvidFromUrl(url) {
-    var matched = String(url || '').match(/\/video\/(BV[0-9A-Za-z]{10})/i);
-    return matched ? matched[1] : '';
+  function detectFallbackInteractionType(target) {
+    var node = target;
+    for (var i = 0; i < 8 && node; i += 1) {
+      var tag = (node.tagName || '').toLowerCase();
+      var role = normalizeText(node.getAttribute && node.getAttribute('role')).toLowerCase();
+      var className = normalizeText(node.className && String(node.className)).toLowerCase();
+      var marker = normalizeText(
+        (node.getAttribute && node.getAttribute('aria-label')) + ' ' +
+        (node.getAttribute && node.getAttribute('title')) + ' ' +
+        (node.getAttribute && node.getAttribute('data-testid')) + ' ' +
+        className
+      ).toLowerCase();
+      var clickable = tag === 'button' || tag === 'a' || role === 'button' || /(btn|button|wrapper|action|interact|icon)/.test(className);
+      if (clickable) {
+        if (/collect|收藏/.test(marker)) {
+          if (shouldSkipInteraction('collect', marker)) {
+            return '';
+          }
+          return 'collect';
+        }
+        if (/comment|评论|留言/.test(marker)) {
+          return 'comment';
+        }
+        if (/like|点赞|喜欢|赞/.test(marker)) {
+          if (shouldSkipInteraction('like', marker)) {
+            return '';
+          }
+          return 'like';
+        }
+      }
+      node = node.parentElement;
+    }
+    return '';
   }
 
-  function extractVideoData() {
-    var state = getInitialState();
-    var bvid = extractBvidFromUrl(global.location.href) || normalizeText(state && state.bvid);
+  function pauseActiveTimer() {
+    if (!activeSince) {
+      return;
+    }
+    dwellMs += Date.now() - activeSince;
+    activeSince = 0;
+  }
+
+  function resetDwellTimer() {
+    dwellMs = 0;
+    activeSince = document.visibilityState === 'visible' ? Date.now() : 0;
+  }
+
+  function resumeActiveTimer() {
+    if (activeSince || document.visibilityState !== 'visible') {
+      return;
+    }
+    activeSince = Date.now();
+  }
+
+  function getDwellSeconds() {
+    var activeNow = activeSince ? Date.now() - activeSince : 0;
+    var totalMs = dwellMs + activeNow;
+    return Math.min(600, Math.max(0, Math.floor(totalMs / 1000)));
+  }
+
+  function extractNotePayload(interactionType) {
+    var noteId = extractNoteIdFromUrl(global.location.href);
     var title = textFromSelectors([
-      'h1.video-title',
-      '.video-title-container h1',
-      '.video-info-title-inner',
-      'h1'
+      '.note-content .title',
+      '[class*="note-content"] [class*="title"]'
     ]);
-    if (!title && state && state.videoData) {
-      title = normalizeText(state.videoData.title);
+    if (!title) {
+      title = normalizeText((document.querySelector('meta[property="og:title"]') || {}).content);
+    }
+    if (title.indexOf('猜你想搜') >= 0) {
+      title = '-';
     }
     if (!title) {
-      title = normalizeText(document.title).replace(/_哔哩哔哩_bilibili$/i, '');
+      title = '-';
     }
-    var uploader = textFromSelectors([
-      '.up-name',
-      '.up-name__text',
-      '.username',
-      '.staff-name',
-      '.up-info-name'
+    var author = textFromSelectors([
+      '.author-container .name',
+      '.author-wrapper .name',
+      '[class*="author"] [class*="name"]',
+      '[class*="user"] [class*="name"]'
     ]);
-    if (!uploader && state && state.videoData && state.videoData.owner) {
-      uploader = normalizeText(state.videoData.owner.name);
+    if (!author) {
+      author = normalizeText(
+        (document.querySelector('meta[name="og:nickname"]') || {}).content ||
+        (document.querySelector('meta[property="article:author"]') || {}).content
+      );
     }
-    var description = extractDescription();
+    var content = textFromSelectors([
+      '.note-content .desc',
+      '.note-content',
+      '[class*="note-content"]',
+      '[class*="desc"]'
+    ]);
+    if (!content) {
+      content = normalizeText(
+        (document.querySelector('meta[property="og:description"]') || {}).content ||
+        (document.querySelector('meta[name="description"]') || {}).content
+      );
+    }
+    if (!content && title) {
+      content = title;
+    }
+
     var tags = extractTags();
-    if (tags.length === 0 && state && state.videoData && state.videoData.tname) {
-      tags = [normalizeText(state.videoData.tname)];
+    if (tags.length === 0) {
+      tags = parseTagsFromContent(content);
     }
-    var topComments = extractTopComments();
 
     return {
-      bvid: bvid,
+      note_id: noteId,
       title: title,
-      uploader: uploader,
+      author: author,
       tags: tags,
-      description: description,
-      top_comments: topComments,
-      interaction_type: 'view'
+      content: content,
+      images_count: extractImagesCount(),
+      likes_count: 0,
+      collects_count: extractActionCount('collect'),
+      comments_count: 0,
+      interaction_type: interactionType || 'view',
+      dwell_seconds: getDwellSeconds(),
+      source_channel: 'extension'
     };
   }
 
@@ -323,7 +505,7 @@
     return new Promise(function (resolve, reject) {
       chrome.runtime.sendMessage(
         {
-          type: 'ingest_video',
+          type: 'ingest_note',
           trigger: trigger,
           payload: payload
         },
@@ -342,45 +524,42 @@
     });
   }
 
-  async function collectAndIngest(trigger) {
+  async function collectAndIngest(trigger, interactionType) {
     if (collectLock) {
       return null;
     }
     collectLock = true;
     try {
-      var payload = extractVideoData();
-      //console.log('[完整采集数据]', payload);
-      if (!payload.bvid || !payload.title || !payload.uploader) {
-        throw new Error('页面信息不足，无法上报 ingest（缺少 bvid/title/uploader）');
+      var payload = extractNotePayload(interactionType || 'view');
+      if (debugPayloadLogEnabled) {
+        console.log('[EatWhat][content][payload]', payload);
       }
+      if (!payload.note_id || !payload.title || !payload.author || !payload.content) {
+        throw new Error('页面信息不足，无法上报 ingest（缺少 note_id/title/author/content）');
+      }
+      latestNoteId = payload.note_id;
       if (logger) {
-        if (payload.top_comments.length === 0) {
-          await logger.log('content', 'WARN', '当前页面评论不可见，按空数组继续上报', {
-            trigger: trigger,
-            bvid: payload.bvid
-          });
-        }
-        await logger.log('content', 'INFO', '准备上报视频采集数据', {
+        await logger.log('content', 'INFO', '准备上报笔记采集数据', {
           trigger: trigger,
-          bvid: payload.bvid,
+          note_id: payload.note_id,
           title: payload.title,
-          has_description: Boolean(payload.description),
-          top_comment_count: payload.top_comments.length
+          author: payload.author,
+          interaction_type: payload.interaction_type,
+          dwell_seconds: payload.dwell_seconds
         });
       }
       var ingestResult = await sendIngestMessage(payload, trigger);
-      latestBvid = payload.bvid;
       if (logger) {
-        await logger.log('content', 'INFO', '视频采集上报成功', {
+        await logger.log('content', 'INFO', '笔记采集上报成功', {
           trigger: trigger,
-          bvid: payload.bvid,
+          note_id: payload.note_id,
           ingest_result: ingestResult
         });
       }
       return ingestResult;
     } catch (error) {
       if (logger) {
-        await logger.log('content', 'ERROR', '视频采集上报失败', {
+        await logger.log('content', 'ERROR', '笔记采集上报失败', {
           trigger: trigger,
           error: error.message,
           url: global.location.href
@@ -392,20 +571,48 @@
     }
   }
 
-  async function collectIfBvidChanged(trigger) {
-    var currentBvid = extractBvidFromUrl(global.location.href);
-    if (!currentBvid || currentBvid === latestBvid) {
+  function sendDwellBeacon(trigger) {
+    pauseActiveTimer();
+    var payload = extractNotePayload('view');
+    if (!payload.note_id || !payload.title || !payload.author || !payload.content) {
       return;
     }
-    await collectAndIngest(trigger);
+    if (payload.dwell_seconds <= 0) {
+      return;
+    }
+    chrome.runtime.sendMessage({
+      type: 'ingest_note',
+      trigger: trigger,
+      payload: payload
+    });
+    if (logger) {
+      logger.log('content', 'INFO', '停留时长已上报', {
+        trigger: trigger,
+        note_id: payload.note_id,
+        dwell_seconds: payload.dwell_seconds
+      });
+    }
+  }
+
+  async function collectIfNoteChanged(trigger) {
+    var currentNoteId = extractNoteIdFromUrl(global.location.href);
+    if (!currentNoteId) {
+      return;
+    }
+    if (currentNoteId !== latestNoteId) {
+      resetDwellTimer();
+    } else {
+      return;
+    }
+    await collectAndIngest(trigger, 'view');
   }
 
   async function collectWithGuard(trigger) {
     try {
-      await collectIfBvidChanged(trigger);
+      await collectIfNoteChanged(trigger);
     } catch (error) {
       if (logger) {
-        await logger.log('content', 'WARN', '自动采集触发失败', {
+        await logger.log('content', 'DEBUG', '自动采集触发失败', {
           trigger: trigger,
           error: error.message
         });
@@ -413,11 +620,35 @@
     }
   }
 
-  chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-    if (!message || message.type !== 'collect_current_video') {
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') {
+      pauseActiveTimer();
       return;
     }
-    collectAndIngest('popup_click')
+    resumeActiveTimer();
+  });
+
+  global.addEventListener('beforeunload', function () {
+    sendDwellBeacon('before_unload');
+  });
+
+  global.addEventListener('pagehide', function () {
+    sendDwellBeacon('page_hide');
+  });
+
+  document.addEventListener('click', function (event) {
+    var interactionType = detectFallbackInteractionType(event.target);
+    if (!interactionType) {
+      return;
+    }
+    triggerInteractionCapture(interactionType, 'interaction_fallback_click');
+  }, true);
+
+  chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+    if (!message || message.type !== 'collect_current_note') {
+      return;
+    }
+    collectAndIngest('popup_click', 'view')
       .then(function (result) {
         sendResponse({ ok: true, data: result });
       })
@@ -427,7 +658,7 @@
     return true;
   });
 
-  global.extractVideoData = extractVideoData;
+  global.extractNoteData = extractNotePayload;
   console.log('hello from content');
 
   if (logger) {
@@ -439,16 +670,19 @@
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     setTimeout(function () {
       collectWithGuard('page_ready');
+      bindInteractionButtons();
     }, 1500);
   } else {
     document.addEventListener('DOMContentLoaded', function () {
       setTimeout(function () {
         collectWithGuard('dom_content_loaded');
+        bindInteractionButtons();
       }, 1500);
     });
   }
 
   setInterval(function () {
     collectWithGuard('spa_navigation');
+    bindInteractionButtons();
   }, 2500);
 })(globalThis);

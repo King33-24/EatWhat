@@ -3,9 +3,13 @@
 (function attachExtensionLogger(global) {
   var extension = global.EatWhatExtension || {};
   var logger = extension.logger || {};
-  var backendBaseUrl =
+  var configuredBaseUrl =
     (global.EatWhatConfig && global.EatWhatConfig.apiBaseUrl) ||
     'http://localhost:8000';
+  var backendBaseUrls = [configuredBaseUrl, 'http://127.0.0.1:8000']
+    .filter(function (url, index, arr) {
+      return arr.indexOf(url) === index;
+    });
   var allowedLevels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
 
   function normalizeLevel(level) {
@@ -47,15 +51,28 @@
     writeConsole(source || 'unknown', normalizedLevel, payload.message, payload.context);
 
     try {
-      var response = await fetch(backendBaseUrl + '/api/log', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) {
-        throw new Error('HTTP ' + response.status);
+      var delivered = false;
+      var lastError = null;
+      for (var i = 0; i < backendBaseUrls.length; i += 1) {
+        try {
+          var response = await fetch(backendBaseUrls[i] + '/api/log', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          if (response.ok) {
+            delivered = true;
+            break;
+          }
+          lastError = new Error('HTTP ' + response.status);
+        } catch (innerError) {
+          lastError = innerError;
+        }
+      }
+      if (!delivered) {
+        throw lastError || new Error('日志上报通道不可达');
       }
     } catch (error) {
       console.warn('[EatWhat][extension][logger][WARN] 日志上报失败', {
@@ -66,6 +83,7 @@
   };
 
   extension.logger = logger;
-  extension.backendBaseUrl = backendBaseUrl;
+  extension.backendBaseUrl = backendBaseUrls[0];
+  extension.backendBaseUrls = backendBaseUrls;
   global.EatWhatExtension = extension;
 })(globalThis);
