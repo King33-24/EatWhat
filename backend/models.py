@@ -15,6 +15,7 @@ class RawObservation(Base):
     author = Column(String)                   # 作者昵称
     tags = Column(Text)                       # JSON 数组字符串(话题标签)
     content = Column(Text)                    # 笔记正文(主信息源)
+    note_type = Column(String, default="image")  # image | video
     images_count = Column(Integer, default=0)  # 图片数量(只数不抓内容)
     likes_count = Column(Integer, default=0)   # 点赞数
     collects_count = Column(Integer, default=0)  # 收藏数

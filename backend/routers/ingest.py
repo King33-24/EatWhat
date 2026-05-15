@@ -19,6 +19,7 @@ class IngestPayload(BaseModel):
     author: str
     tags: list[str] | None = None
     content: str | None = None
+    note_type: str | None = None   # image | video；None 时后端自动推断
     images_count: int | None = 0
     likes_count: int | None = 0
     collects_count: int | None = 0
@@ -38,12 +39,16 @@ class IngestPayload(BaseModel):
 def ingest(payload: IngestPayload, db: Session = Depends(get_db)):
     """接收笔记元数据,写入 raw_observations 表。"""
     try:
+        # 自动推断 note_type：前端传了就用，没传则 images_count==0 认为是视频
+        note_type = payload.note_type or ("video" if (payload.images_count or 0) == 0 else "image")
+
         obs = RawObservation(
             note_id=payload.note_id,
             title=payload.title,
             author=payload.author,
             tags=",".join(payload.tags) if payload.tags else None,
             content=payload.content,
+            note_type=note_type,
             images_count=payload.images_count or 0,
             likes_count=payload.likes_count or 0,
             collects_count=payload.collects_count or 0,
