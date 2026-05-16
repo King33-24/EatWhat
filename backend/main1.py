@@ -30,7 +30,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS:扩展(chrome-extension://*) + 前端(localhost:8000) + WebChat(localhost:8001)
+# CORS:扩展(chrome-extension://*) + 前端(localhost:8000) + OpenClaw Dashboard(localhost:18789)
 # MVP 阶段 allow_origins=["*"] 宽松放行,生产化时按 docs/api.md §0.3 收紧。
 app.add_middleware(
     CORSMiddleware,

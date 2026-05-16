@@ -2,7 +2,7 @@
 
 > **用途**：前后端 + 浏览器扩展 + OpenClaw 之间的接口约定。任何一方修改前先在群里同步。
 > **后端服务地址**：`http://localhost:8000`
-> **OpenClaw WebChat**：`http://localhost:8001`（不属于本契约范畴）
+> **OpenClaw Dashboard/WebChat**：`http://localhost:18789/#token=55767dce217b8f258bb207e4a08ffc6a59803cdecfd2a82f`（不属于本契约范畴；token 见 ~/.openclaw/openclaw.json）
 
 ---
 
@@ -39,7 +39,7 @@ MVP 阶段**不做认证**（单机本地运行）。生产化时再加。
 后端允许以下来源跨域：
 - `chrome-extension://*`（浏览器扩展）
 - `http://localhost:8000`（前端 Dashboard）
-- `http://localhost:8001`（OpenClaw WebChat）
+- `http://localhost:18789`（OpenClaw Dashboard）
 
 ### 0.4 时间格式
 
@@ -434,9 +434,56 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
 
 ---
 
-## 6. 健康检查
+## 6. 苏格拉底对话代理
 
-### 6.1 `GET /`
+### 6.1 `POST /api/chat`
+
+将前端消息代理给 OpenClaw Agent（socratic_dialog Skill），实现嵌入式对话，无需跳转 Dashboard。
+
+**请求体**：
+```json
+{
+  "message": "你怎么看躺平？",
+  "session_id": null,
+  "context": null
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `message` | string | 是 | 用户本轮消息 |
+| `session_id` | string\|null | 否 | 上一轮返回的 session_id，传入以保持对话上下文；首轮传 null |
+| `context` | string\|null | 否 | 平行书架 contrast_card 内容；首轮可传入，后续轮次忽略 |
+
+**响应**：
+```json
+{
+  "success": true,
+  "data": {
+    "reply": "你觉得躺平背后最根本的原因是什么？",
+    "session_id": "550e8400-e29b-41d4-a716-446655440000"
+  },
+  "error": null
+}
+```
+
+**前端使用说明**：
+- 首轮请求：`session_id=null`，可选传 `context`（书架卡片的 contrast 文字）
+- 后续轮次：把上一轮响应的 `session_id` 传回，保持对话上下文
+- Agent 遵循苏格拉底规则：只追问不下结论，每次一个问题
+
+**错误码**：
+
+| HTTP | 说明 |
+|---|---|
+| 504 | OpenClaw Agent 响应超时（90s 内无响应） |
+| 500 | OpenClaw 未运行或响应格式异常 |
+
+---
+
+## 7. 健康检查
+
+### 7.1 `GET /`
 
 基础存活检查。
 
@@ -451,7 +498,7 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
 
 ---
 
-## 7. HTMX 调用示例
+## 8. HTMX 调用示例
 
 由于 Web Dashboard 用 HTMX，简单交互通过 HTML 属性直接驱动，不写 JS：
 
@@ -488,7 +535,7 @@ fetch('/api/report/latest').then(r => r.json()).then(({data}) => {
 
 ---
 
-## 8. 后端实现备忘（给后端工程师）
+## 9. 后端实现备忘（给后端工程师）
 
 ### 8.1 路由分文件
 
@@ -530,7 +577,7 @@ def err(message, status=400):
 
 ---
 
-## 9. 变更历史
+## 10. 变更历史
 
 | 版本 | 日期 | 变更 |
 |---|---|---|

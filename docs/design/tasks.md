@@ -139,7 +139,7 @@ T3 (6/6) 决赛日:现场答辩
 - **预计**:6h(留 1.5 天)
 - **怎么做**:
   1. <https://github.com/openclaw/openclaw> 看 README Installation
-  2. 装好 + 配置 DeepSeek Key + 启动 → WebChat localhost:8001
+  2. 装好 + 配置 DeepSeek Key + 启动 → WebChat localhost:18789
   3. 用 Claude 协作:把官方 README 贴给 Claude,让它解释每一步
   4. 卡住先看 [datawhalechina/hello-claw](https://github.com/datawhalechina/hello-claw) 中文教程
   5. 还卡就跳过,先做 B-03,W1 末再回来
@@ -374,7 +374,7 @@ T3 (6/6) 决赛日:现场答辩
 - **怎么做**:
   1. DaisyUI list/card,每条推荐一张
   2. 卡片结构:标题 / 来源 badge / 作者背景灰字 / 差异对比卡(浅黄底 `#fef9e7` 突出) / 折叠展开
-  3. "苏格拉底追问"按钮 → 跳 OpenClaw WebChat(iframe 或新窗口)
+  3. "苏格拉底追问"按钮 → 展开内嵌聊天框，调用 `POST /api/chat` 代理到 OpenClaw Agent
 - **验收**:能渲染所有书架项,折叠展开正常
 
 ### B-07:实现 CRUD /api/cooldown(5/20)
@@ -405,7 +405,7 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★★
 - **预计**:3h
 - **怎么做**:Skill 的 prompt 核心"苏格拉底式,只追问不回答,每次一个问题,基于书架 contrast_card 上下文"
-- **验收**:WebChat 里问"你怎么看躺平",Agent 只追问不下结论
+- **验收**:curl `POST /api/chat` 发消息"你怎么看躺平",Agent 只追问不下结论
 
 ### S-05:W2 末全链路联调(5/21 晚)
 - **谁做**:双方
@@ -424,7 +424,7 @@ T3 (6/6) 决赛日:现场答辩
 - [ ] analyze_cognition + search_parallel_views + cooldown_unlock + socratic_dialog 4 个 Skill 都有
 - [ ] report.html / bookshelf.html / cooldown.html 三个页面完整渲染
 - [ ] 全链路:扩展采集 → 报告生成 → 书架推荐 → 冷静期盒子,通!
-- [ ] 苏格拉底追问能在 WebChat 里跑
+- [ ] 苏格拉底追问能通过 `/api/chat` 代理接口调用
 
 ---
 

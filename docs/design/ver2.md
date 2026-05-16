@@ -76,7 +76,7 @@
 - **作者背景说明**:"这篇的作者是一位长期研究 XXX 的学者,他的核心关切是 YYY。"
 - **差异对比卡片**:"它和你常看的内容,在最根本的假设上有什么不同 / 为什么一些理性的人会持有这个观点。"
 
-**苏格拉底式追问入口**:每条推荐下有按钮跳转到 OpenClaw WebChat,调用 `socratic_dialog` Skill 与用户深入探讨。
+**苏格拉底式追问入口**:每条推荐下有"追问"按钮，点击展开内嵌聊天框，通过 `POST /api/chat` 代理给 OpenClaw Agent（`socratic_dialog` Skill），无需跳转外部页面。
 
 **实现方式**:先用 Bing Search API(或 Serper.dev)实时搜索,把搜索结果作为上下文喂给 DeepSeek,让它筛选 + 总结。
 
@@ -173,9 +173,9 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
         │   │   ├── 报告页(/report.html)             │
         │   │   ├── 平行书架页(/bookshelf.html)      │
         │   │   ├── 冷静期盒子页(/cooldown.html)     │
-        │   │   └── 对话框 (iframe → :8001 WebChat)  │
+        │   │   └── 对话框 (新标签页 → :18789 Dashboard)│
         │   │                                        │
-        │   └── OpenClaw WebChat(localhost:8001)     │
+        │   └── OpenClaw Dashboard(localhost:18789)  │
         │       └─── 苏格拉底对话入口                │
         │                                            │
         ├── 进程 1: FastAPI + Uvicorn(localhost:8000)
@@ -195,7 +195,7 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
         │   └── Skills/
         │       ├── analyze_cognition       (周更 / 主动触发:读 DB → 调 DeepSeek → 写 reports)
         │       ├── search_parallel_views   (报告生成后:Bing/Serper 搜索 + DeepSeek 筛选 → 写 bookshelf_items)
-        │       ├── socratic_dialog         (WebChat 对话:基于书架 / 报告上下文追问)
+        │       ├── socratic_dialog         (/api/chat 代理:基于书架 / 报告上下文追问，通过后端 subprocess 调用)
         │       └── cooldown_unlock         (cron 每日:扫描 unlock_at<now → status='unlocked')
         │
         └── VS Code(写代码 + Copilot)
@@ -217,7 +217,7 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
 | 2 | 周日 23:00 / 用户点"生成报告" | OpenClaw cron / 用户消息 → `analyze_cognition` Skill → 读 `raw_observations` 近 7 天 → 调 DeepSeek V4 Flash → 写 `reports` 表 |
 | 3 | 报告生成后自动 / 用户点"刷新书架" | `search_parallel_views` Skill → 读最新 `reports.blind_spots` → Bing/Serper 搜索 + DeepSeek 筛选 → 写 `bookshelf_items` 表 |
 | 4 | 用户访问 `/report.html` | 浏览器 → FastAPI → 读 `reports` 最新一条 → 渲染 HTML + ECharts |
-| 5 | 用户点"苏格拉底追问" | 浏览器 → OpenClaw WebChat → `socratic_dialog` Skill → DeepSeek 多轮对话 |
+| 5 | 用户点"苏格拉底追问" | 浏览器 → `POST :8000/api/chat`（FastAPI 代理）→ `openclaw agent --local` → `socratic_dialog` Skill → DeepSeek 多轮对话 |
 | 6 | 用户存"冷静期盒子" | 扩展右键 / Web 输入框 → FastAPI → 写 `cooldown_items` 表 |
 | 7 | 每天 00:30 | OpenClaw cron → `cooldown_unlock` Skill → 更新 `status='unlocked'` |
 
