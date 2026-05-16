@@ -1,13 +1,17 @@
-"""GET /api/report/* — 报告查询接口。"""
+"""GET /api/report/* + POST /api/report/generate — 报告查询与触发接口。"""
 import json
+import subprocess
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from database import get_db
 from logger import log
 from models import Report
+
+_VENV_PYTHON = "/home/king/project/backend/.venv/bin/python3"
+_ANALYZE_SCRIPT = "/home/king/project/openclaw_workspace/skills/analyze-cognition/scripts/analyze_cognition.py"
 
 router = APIRouter()
 
@@ -24,6 +28,18 @@ def _report_to_dict(report: Report) -> dict:
         "emotion_pattern": json.loads(report.emotion_pattern) if report.emotion_pattern else [],
         "generated_at": str(report.generated_at),
     }
+
+
+def _run_analyze():
+    subprocess.run([_VENV_PYTHON, _ANALYZE_SCRIPT], capture_output=True, text=True)
+
+
+@router.post("/generate")
+def generate_report(background_tasks: BackgroundTasks):
+    """触发报告生成（异步）— 立即返回，前端轮询 GET /latest 等结果。"""
+    background_tasks.add_task(_run_analyze)
+    log(source="backend", level="INFO", message="报告生成任务已启动")
+    return {"success": True, "data": {"status": "generating"}, "error": None}
 
 
 @router.get("/latest")

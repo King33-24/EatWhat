@@ -1,5 +1,7 @@
-"""GET /api/bookshelf — 平行书架查询。"""
-from fastapi import APIRouter, Depends
+"""GET /api/bookshelf + POST /api/bookshelf/refresh — 平行书架查询与刷新。"""
+import subprocess
+
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
@@ -7,7 +9,22 @@ from database import get_db
 from logger import log
 from models import BookshelfItem, Report
 
+_VENV_PYTHON = "/home/king/project/backend/.venv/bin/python3"
+_SEARCH_SCRIPT = "/home/king/project/openclaw_workspace/skills/search-parallel-views/scripts/search_parallel_views.py"
+
 router = APIRouter()
+
+
+def _run_search():
+    subprocess.run([_VENV_PYTHON, _SEARCH_SCRIPT], capture_output=True, text=True)
+
+
+@router.post("/refresh")
+def refresh_bookshelf(background_tasks: BackgroundTasks):
+    """触发书架刷新（异步）— 立即返回，前端轮询 GET /api/bookshelf 等结果。"""
+    background_tasks.add_task(_run_search)
+    log(source="backend", level="INFO", message="书架刷新任务已启动")
+    return {"success": True, "data": {"status": "refreshing"}, "error": None}
 
 
 @router.get("")
