@@ -7,6 +7,8 @@
   var collectLock = false;
   var dwellMs = 0;
   var activeSince = document.visibilityState === 'visible' ? Date.now() : 0;
+  var dwellBeaconInFlight = false;
+  var dwellBeaconAcked = false;
   var lastInteractionAt = 0;
   var lastInteractionType = '';
   var debugPayloadLogEnabled = Boolean(global.EatWhatConfig && global.EatWhatConfig.debugPayload);
@@ -279,6 +281,12 @@
     return tags;
   }
 
+  function wait(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
   function extractTags() {
     var nodes = document.querySelectorAll('a[href*="search_result"], [class*="tag"], [data-tag]');
     var tags = [];
@@ -422,6 +430,8 @@
   function resetDwellTimer() {
     dwellMs = 0;
     activeSince = document.visibilityState === 'visible' ? Date.now() : 0;
+    dwellBeaconInFlight = false;
+    dwellBeaconAcked = false;
   }
 
   function resumeActiveTimer() {
@@ -491,6 +501,7 @@
       author: author,
       tags: tags,
       content: content,
+      note_type: document.querySelector('video') ? 'video' : 'image',
       images_count: extractImagesCount(),
       likes_count: 0,
       collects_count: extractActionCount('collect'),
@@ -530,6 +541,7 @@
     }
     collectLock = true;
     try {
+      await wait(500);
       var payload = extractNotePayload(interactionType || 'view');
       if (debugPayloadLogEnabled) {
         console.log('[EatWhat][content][payload]', payload);
@@ -573,6 +585,9 @@
 
   function sendDwellBeacon(trigger) {
     pauseActiveTimer();
+    if (dwellBeaconInFlight || dwellBeaconAcked) {
+      return;
+    }
     var payload = extractNotePayload('view');
     if (!payload.note_id || !payload.title || !payload.author || !payload.content) {
       return;
@@ -580,28 +595,61 @@
     if (payload.dwell_seconds <= 0) {
       return;
     }
-    chrome.runtime.sendMessage({
-      type: 'ingest_note',
-      trigger: trigger,
-      payload: payload
-    });
-    if (logger) {
-      logger.log('content', 'INFO', '停留时长已上报', {
+    dwellBeaconInFlight = true;
+    chrome.runtime.sendMessage(
+      {
+        type: 'ingest_note',
         trigger: trigger,
-        note_id: payload.note_id,
-        dwell_seconds: payload.dwell_seconds
-      });
+        payload: payload
+      },
+      function (response) {
+        dwellBeaconInFlight = false;
+        if (chrome.runtime.lastError) {
+          if (logger) {
+            logger.log('content', 'WARN', '停留时长上报失败', {
+              trigger: trigger,
+              note_id: payload.note_id,
+              error: chrome.runtime.lastError.message
+            });
+          }
+          return;
+        }
+        if (!response || !response.ok) {
+          if (logger) {
+            logger.log('content', 'WARN', '停留时长上报失败', {
+              trigger: trigger,
+              note_id: payload.note_id,
+              error: (response && response.error) || 'background 未返回成功结果'
+            });
+          }
+          return;
+        }
+        dwellBeaconAcked = true;
+        if (logger) {
+          logger.log('content', 'INFO', '停留时长已上报', {
+            trigger: trigger,
+            note_id: payload.note_id,
+            dwell_seconds: payload.dwell_seconds
+          });
+        }
+      }
+    );
+  }
+
+  function refreshDwellBeaconStateByNoteId() {
+    var currentNoteId = extractNoteIdFromUrl(global.location.href);
+    if (!currentNoteId || currentNoteId !== latestNoteId) {
+      resetDwellTimer();
+      if (currentNoteId) {
+        latestNoteId = currentNoteId;
+      }
+      return true;
     }
+    return false;
   }
 
   async function collectIfNoteChanged(trigger) {
-    var currentNoteId = extractNoteIdFromUrl(global.location.href);
-    if (!currentNoteId) {
-      return;
-    }
-    if (currentNoteId !== latestNoteId) {
-      resetDwellTimer();
-    } else {
+    if (!refreshDwellBeaconStateByNoteId()) {
       return;
     }
     await collectAndIngest(trigger, 'view');
@@ -623,6 +671,9 @@
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'hidden') {
       pauseActiveTimer();
+      return;
+    }
+    if (refreshDwellBeaconStateByNoteId()) {
       return;
     }
     resumeActiveTimer();
