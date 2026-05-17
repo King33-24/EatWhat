@@ -4,7 +4,8 @@
     uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 启动后:
-    - 浏览器开 http://localhost:8000 看到 "EatWhat Backend OK"
+    - 浏览器开 http://localhost:8000 看到前端主页
+    - 健康检查: http://localhost:8000/api/health
     - 同时 / 根路径也 serve 前端 ../frontend 的静态文件
 """
 from contextlib import asynccontextmanager
@@ -52,9 +53,9 @@ app.include_router(logs.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 
 
-@app.get("/")
+@app.get("/api/health")
 def health():
-    """健康检查 — 见 docs/api.md §6.1。"""
+    """健康检查 — 见 docs/api.md §7.1。"""
     return {
         "message": f"{config.APP_NAME} OK",
         "version": config.APP_VERSION,
