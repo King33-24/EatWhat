@@ -34,10 +34,7 @@
             <h1 class="text-2xl font-semibold md:text-3xl">平行书架</h1>
             <p class="text-sm text-base-content/70">针对盲区推荐理性视角，解释“为什么有人会这样看问题”。</p>
           </div>
-          <button class="btn btn-outline"
-                  hx-post="/api/bookshelf/refresh"
-                  hx-target="#bookshelf-status"
-                  hx-swap="innerHTML">刷新书架</button>
+          <button id="bookshelf-refresh-btn" class="btn btn-outline">刷新书架</button>
         </div>
       </div>
     </section>
@@ -101,7 +98,131 @@
     'use strict';
 
     window.addEventListener('DOMContentLoaded', function () {
+      var api = window.EatWhat && window.EatWhat.api;
+      var logger = window.EatWhat && window.EatWhat.logger;
+      var refreshButton = document.getElementById('bookshelf-refresh-btn');
+      var statusNode = document.getElementById('bookshelf-status');
       var chatState = {};
+      var bookshelfSnapshot = {
+        fingerprint: 'empty',
+        reportId: null,
+        itemCount: 0
+      };
+
+      function setStatus(kind, message) {
+        statusNode.className = 'alert text-sm text-base-content/80';
+        if (kind === 'success') {
+          statusNode.classList.add('bg-[#eafaf1]');
+        } else if (kind === 'error') {
+          statusNode.classList.add('bg-[#fdecea]');
+        } else {
+          statusNode.classList.add('bg-[var(--eatwhat-highlight)]');
+        }
+        statusNode.textContent = message;
+      }
+
+      function sleep(ms) {
+        return new Promise(function (resolve) {
+          setTimeout(resolve, ms);
+        });
+      }
+
+      function createBookshelfFingerprint(data) {
+        if (!data || !Array.isArray(data.items)) {
+          return 'empty';
+        }
+        var latestCreatedAt = '';
+        data.items.forEach(function (item) {
+          if (item.created_at && item.created_at > latestCreatedAt) {
+            latestCreatedAt = item.created_at;
+          }
+        });
+        return String(data.report_id || '') + ':' + String(data.items.length) + ':' + latestCreatedAt;
+      }
+
+      function updateBookshelfSnapshot(data) {
+        bookshelfSnapshot.fingerprint = createBookshelfFingerprint(data);
+        bookshelfSnapshot.reportId = data && data.report_id ? data.report_id : null;
+        bookshelfSnapshot.itemCount = data && Array.isArray(data.items) ? data.items.length : 0;
+      }
+
+      async function fetchBookshelf() {
+        var result = await api.get('/api/bookshelf');
+        return result.data;
+      }
+
+      async function syncInitialBookshelf() {
+        if (!api) {
+          setStatus('error', '初始化失败：EatWhat.api 不可用');
+          return;
+        }
+
+        var data = await fetchBookshelf();
+        updateBookshelfSnapshot(data);
+        if (!data || !Array.isArray(data.items) || data.items.length === 0) {
+          setStatus('info', '当前书架为空。点击“刷新书架”后将自动轮询最新结果。');
+          return;
+        }
+        setStatus('info', '当前书架 report_id=' + data.report_id + '，共 ' + data.items.length + ' 条推荐。');
+      }
+
+      async function handleRefreshClick() {
+        if (!api) {
+          setStatus('error', '请求失败：EatWhat.api 不可用');
+          return;
+        }
+
+        var beforeFingerprint = bookshelfSnapshot.fingerprint;
+        var beforeReportId = bookshelfSnapshot.reportId;
+        refreshButton.disabled = true;
+        setStatus('info', '书架刷新任务已触发，正在处理中（每 3 秒自动检查一次）…');
+
+        if (logger) {
+          logger.log('frontend', 'INFO', '点击刷新书架', {
+            page: '/bookshelf.html',
+            before_report_id: beforeReportId
+          });
+        }
+
+        try {
+          await api.post('/api/bookshelf/refresh');
+          for (var i = 0; i < 20; i += 1) {
+            await sleep(3000);
+            var latest = await fetchBookshelf();
+            var latestFingerprint = createBookshelfFingerprint(latest);
+            if (latestFingerprint !== beforeFingerprint) {
+              updateBookshelfSnapshot(latest);
+               setStatus(
+                'success',
+                '书架已更新：report_id=' + (latest.report_id || '-') + '，共 ' + latest.items.length + ' 条推荐。'
+              );
+              if (logger) {
+                logger.log('frontend', 'INFO', '书架刷新完成', {
+                  page: '/bookshelf.html',
+                  report_id: latest.report_id,
+                  item_count: latest.items.length
+                });
+              }
+              return;
+            }
+          }
+
+          setStatus('error', '等待超时：书架仍在刷新中，请稍后再试。');
+          if (logger) {
+            logger.log('frontend', 'WARN', '书架轮询超时', { page: '/bookshelf.html' });
+          }
+        } catch (error) {
+          setStatus('error', '刷新失败：' + error.message);
+          if (logger) {
+            logger.log('frontend', 'ERROR', '书架刷新失败', {
+              page: '/bookshelf.html',
+              error: error.message
+            });
+          }
+        } finally {
+          refreshButton.disabled = false;
+        }
+      }
 
       function getState(cardId) {
         if (!chatState[cardId]) {
@@ -200,6 +321,11 @@
             appendChatMessage(cardId, 'assistant', '请求失败：' + error.message);
           }
         });
+      });
+
+      refreshButton.addEventListener('click', handleRefreshClick);
+      syncInitialBookshelf().catch(function (error) {
+        setStatus('error', '初始化失败：' + error.message);
       });
 
       if (window.EatWhat && window.EatWhat.logger) {

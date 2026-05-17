@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EatWhat · 冷静期盒子</title>
   <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.13/dist/full.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
@@ -33,6 +34,7 @@
         <p class="text-sm text-base-content/70">把冲动想看的链接先锁住，给决策留 7 天缓冲时间。</p>
         <form class="grid grid-cols-1 gap-3 md:grid-cols-6"
               hx-post="/api/cooldown"
+              hx-ext="json-enc"
               hx-target="#cooldown-status"
               hx-swap="innerHTML">
           <input class="input input-bordered md:col-span-3" name="url" type="url" placeholder="https://www.xiaohongshu.com/explore/64a7b3a200000000000005d" required>

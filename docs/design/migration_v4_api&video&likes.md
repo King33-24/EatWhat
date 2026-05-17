@@ -75,4 +75,59 @@
     chrome.runtime.sendMessage(data);
   }, 500);
   
+点赞/评论数延时也没用（有空再修）
+  
+  500ms 不够，因为小红书不是等固定时间加载，而是等页面滚到对应位置才
+  渲染（懒加载 + 视口触发）。纯延时解决不了。
+
+  有两个可用方案，按难度排：
+
+  方案A（推荐，简单）— 加长延时 + 滚动触发
+
+  在 content.js 里，先模拟滚动一次让数据区进入视口，再等更长时间：
+
+  // 触发懒加载
+  window.scrollTo(0, document.body.scrollHeight);
+  setTimeout(() => window.scrollTo(0, 0), 300);
+
+  // 等足够长再抓
+  setTimeout(() => {
+    const data = extractNoteData();
+    chrome.runtime.sendMessage(data);
+  }, 2000);  // 500ms 改成 2000ms
+
+  方案B（更稳，稍复杂）— MutationObserver 等元素出现
+
+  function waitForElement(selector, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const el = document.querySelector(selector);
+      if (el) return resolve(el);
+      const observer = new MutationObserver(() => {
+        const el = document.querySelector(selector);
+        if (el) { observer.disconnect(); resolve(el); }
+      });
+      observer.observe(document.body, { childList: true, subtree:
+  true });
+      setTimeout(() => { observer.disconnect(); reject(); },
+  timeout);
+    });
+  }
+
+  // 等点赞数元素出现再抓
+  waitForElement('.like-count选择器')  // 改成实际的 class
+    .then(() => {
+      const data = extractNoteData();
+      chrome.runtime.sendMessage(data);
+    })
+    .catch(() => {
+      // 超时了也发，数字可能不准
+      chrome.runtime.sendMessage(extractNoteData());
+    });
+
+  实际建议：先让F同学试方案A（改成2000ms +
+  加滚动），成本低。如果还是不行再上方案B。另外，点赞/评论数对
+  analyze_cognition
+  分析影响有限，主要信息源是笔记正文和标签，数字不准不影响核心功能，
+  可以在技术报告里注明"受平台懒加载机制影响，互动数据为近似值"。
+
   ---

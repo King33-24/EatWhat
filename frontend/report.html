@@ -34,10 +34,7 @@
             <h1 class="text-2xl font-semibold md:text-3xl">认知体检报告</h1>
             <p class="text-sm text-base-content/70">兴趣地图 · 观点光谱 · 思维盲区 · 情绪共鸣模式</p>
           </div>
-          <button class="btn eatwhat-btn-main"
-                  hx-post="/api/report/generate"
-                  hx-target="#report-status"
-                  hx-swap="innerHTML">立即生成报告</button>
+          <button id="report-generate-btn" class="btn eatwhat-btn-main">立即生成报告</button>
         </div>
       </div>
     </section>
@@ -96,6 +93,119 @@
     'use strict';
 
     window.addEventListener('DOMContentLoaded', function () {
+      var api = window.EatWhat && window.EatWhat.api;
+      var logger = window.EatWhat && window.EatWhat.logger;
+      var generateButton = document.getElementById('report-generate-btn');
+      var statusNode = document.getElementById('report-status');
+      var reportSnapshot = {
+        id: null,
+        generatedAt: null
+      };
+
+      function setStatus(kind, message) {
+        statusNode.className = 'alert text-sm text-base-content/80';
+        if (kind === 'success') {
+          statusNode.classList.add('bg-[#eafaf1]');
+        } else if (kind === 'error') {
+          statusNode.classList.add('bg-[#fdecea]');
+        } else {
+          statusNode.classList.add('bg-[var(--eatwhat-highlight)]');
+        }
+        statusNode.textContent = message;
+      }
+
+      function sleep(ms) {
+        return new Promise(function (resolve) {
+          setTimeout(resolve, ms);
+        });
+      }
+
+      function updateSnapshot(report) {
+        reportSnapshot.id = report ? report.id : null;
+        reportSnapshot.generatedAt = report ? report.generated_at : null;
+      }
+
+      async function fetchLatestReport() {
+        var result = await api.get('/api/report/latest');
+        return result.data;
+      }
+
+      async function syncInitialSnapshot() {
+        if (!api) {
+          setStatus('error', '初始化失败：EatWhat.api 不可用');
+          return;
+        }
+
+        var latest = await fetchLatestReport();
+        updateSnapshot(latest);
+        if (latest) {
+          setStatus('info', '当前最新报告 #' + latest.id + '，生成时间：' + latest.generated_at);
+          return;
+        }
+        setStatus('info', '当前暂无报告。点击“立即生成报告”后将自动轮询最新结果。');
+      }
+
+      async function handleGenerateClick() {
+        if (!api) {
+          setStatus('error', '请求失败：EatWhat.api 不可用');
+          return;
+        }
+
+        var beforeId = reportSnapshot.id;
+        var beforeGeneratedAt = reportSnapshot.generatedAt;
+        generateButton.disabled = true;
+        setStatus('info', '报告任务已触发，正在生成中（每 3 秒自动检查一次）…');
+
+        if (logger) {
+          logger.log('frontend', 'INFO', '点击生成报告', {
+            page: '/report.html',
+            before_report_id: beforeId
+          });
+        }
+
+        try {
+          await api.post('/api/report/generate');
+          for (var i = 0; i < 20; i += 1) {
+            await sleep(3000);
+            var latest = await fetchLatestReport();
+            if (
+              latest &&
+              (latest.id !== beforeId || latest.generated_at !== beforeGeneratedAt)
+            ) {
+              updateSnapshot(latest);
+              setStatus('success', '报告已生成：#' + latest.id + '（' + latest.generated_at + '）');
+              if (logger) {
+                logger.log('frontend', 'INFO', '报告生成完成', {
+                  page: '/report.html',
+                  report_id: latest.id
+                });
+              }
+              return;
+            }
+          }
+
+          setStatus('error', '等待超时：报告仍在生成中，请稍后再试。');
+          if (logger) {
+            logger.log('frontend', 'WARN', '报告轮询超时', { page: '/report.html' });
+          }
+        } catch (error) {
+          setStatus('error', '生成失败：' + error.message);
+          if (logger) {
+            logger.log('frontend', 'ERROR', '报告生成失败', {
+              page: '/report.html',
+              error: error.message
+            });
+          }
+        } finally {
+          generateButton.disabled = false;
+        }
+      }
+
+      generateButton.addEventListener('click', handleGenerateClick);
+      syncInitialSnapshot().catch(function (error) {
+        setStatus('error', '初始化失败：' + error.message);
+      });
+
       if (window.EatWhat && window.EatWhat.logger) {
         window.EatWhat.logger.log('frontend', 'INFO', '进入报告页', { page: '/report.html' });
       }
