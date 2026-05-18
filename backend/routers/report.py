@@ -31,7 +31,11 @@ def _report_to_dict(report: Report) -> dict:
 
 
 def _run_analyze():
-    subprocess.run([_VENV_PYTHON, _ANALYZE_SCRIPT], capture_output=True, text=True)
+    result = subprocess.run([_VENV_PYTHON, _ANALYZE_SCRIPT], capture_output=True, text=True)
+    if result.returncode != 0:
+        log(source="backend", level="ERROR", message="报告生成脚本失败", context={"stderr": result.stderr[-500:]})
+    else:
+        log(source="backend", level="INFO", message="报告生成脚本完成", context={"stdout": result.stdout[-200:]})
 
 
 @router.post("/generate")

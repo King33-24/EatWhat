@@ -13,6 +13,15 @@ from pathlib import Path
 
 import httpx
 
+# 从 backend/.env 加载环境变量（兼容无 shell export 的场景）
+_env_file = Path("/home/king/project/backend/.env")
+if _env_file.exists():
+    for _line in _env_file.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
+
 DB_PATH = "/home/king/project/data/eatwhat.db"
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")

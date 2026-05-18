@@ -16,7 +16,11 @@ router = APIRouter()
 
 
 def _run_search():
-    subprocess.run([_VENV_PYTHON, _SEARCH_SCRIPT], capture_output=True, text=True)
+    result = subprocess.run([_VENV_PYTHON, _SEARCH_SCRIPT], capture_output=True, text=True)
+    if result.returncode != 0:
+        log(source="backend", level="ERROR", message="书架刷新脚本失败", context={"stderr": result.stderr[-500:]})
+    else:
+        log(source="backend", level="INFO", message="书架刷新脚本完成", context={"stdout": result.stdout[-200:]})
 
 
 @router.post("/refresh")

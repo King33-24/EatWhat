@@ -11,35 +11,45 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import quote_plus
-
 import httpx
+
+# 从 backend/.env 加载环境变量（兼容无 shell export 的场景）
+_env_file = Path("/home/king/project/backend/.env")
+if _env_file.exists():
+    for _line in _env_file.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
 
 DB_PATH = "/home/king/project/data/eatwhat.db"
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 
-FILTER_SYSTEM_PROMPT = """你是一个信息筛选助手。用户给你一个思维盲区描述和一批搜索结果，
-你需要从中选出最适合作为"平行观点"的2-3条，生成结构化推荐。
-要求：选理性、有论据的内容；避免情绪化煽动；优先学术或深度分析文章。
+GENERATE_SYSTEM_PROMPT = """你是"问膳"的平行书架推荐引擎。根据用户的思维盲区，推荐2-3条能补充该视角的内容。
+
+核心约束：
+1. 【话题相关】推荐内容必须与盲区描述的话题直接相关，禁止跨域推荐（例如：盲区是"暗恋故事"，就推荐情感/心理类内容，不要推荐职场或理财）
+2. 【来源可靠】只推荐以下类型：知名书籍（有ISBN）、知名纪录片/电影、主流学术概念/理论、知名学者的公开演讲。禁止推荐无法验证的文章、知乎帖子、微信公众号文章
+3. 【不编造URL】url 字段一律留空字符串 ""，不要填写任何 URL，避免给出不存在的链接
+4. contrast_card：说明该内容与用户已接触视角的具体差异，不超过80字
+5. author_intro：简述作者/来源权威性，不超过50字
 
 输出严格 JSON（不要 Markdown 代码块）：
 {
   "items": [
     {
-      "title": "文章/内容标题",
+      "title": "书名/纪录片名/理论名称",
       "source_type": "article",
-      "url": "https://...",
-      "contrast_card": "这篇内容与你常看的内容，在[具体假设]上有根本不同：它认为...而你接触的内容大多认为...",
-      "author_intro": "这篇的作者/来源是[背景描述]，其核心关切是[关切点]。"
+      "url": "",
+      "contrast_card": "与你常接触的[具体视角]不同，这里认为[具体差异]。",
+      "author_intro": "作者/来源权威背景简介。"
     }
   ]
 }
 
 source_type 可选：article / video / podcast / wechat
-contrast_card 要具体，不超过80字。
-author_intro 不超过50字。
 """
 
 
@@ -57,53 +67,13 @@ def get_latest_report() -> tuple[int, list[dict]]:
     return row["id"], blind_spots
 
 
-def ddg_search(query: str, max_results: int = 5) -> list[dict]:
-    """用 DuckDuckGo Lite 搜索，返回 [{title, url, snippet}]。"""
-    try:
-        url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-        headers = {"User-Agent": "Mozilla/5.0 (compatible; EatWhat/1.0)"}
-        with httpx.Client(timeout=10.0, follow_redirects=True) as client:
-            resp = client.get(url, headers=headers)
-        html = resp.text
-
-        results = []
-        import re
-        # 从 DDG HTML 提取结果
-        pattern = re.compile(
-            r'<a[^>]+class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)</a>.*?'
-            r'<a[^>]+class="result__snippet"[^>]*>([^<]+)</a>',
-            re.DOTALL,
-        )
-        for m in pattern.finditer(html):
-            results.append({"url": m.group(1), "title": m.group(2).strip(), "snippet": m.group(3).strip()})
-            if len(results) >= max_results:
-                break
-
-        # 如果正则没匹配到，fallback 简单提取
-        if not results:
-            url_pat = re.compile(r'href="(https?://[^"]+)"')
-            title_pat = re.compile(r'<a[^>]+class="result__a"[^>]*>([^<]+)</a>')
-            urls = url_pat.findall(html)[:max_results]
-            titles = title_pat.findall(html)[:max_results]
-            for u, t in zip(urls, titles):
-                results.append({"url": u, "title": t.strip(), "snippet": ""})
-
-        return results[:max_results]
-    except Exception:
-        return []
-
-
-def call_deepseek_filter(blind_spot: dict, search_results: list[dict]) -> list[dict]:
-    """用 DeepSeek 从搜索结果中筛选出高质量平行观点。"""
-    results_text = "\n".join(
-        f"{i+1}. 标题：{r['title']}\n   URL：{r['url']}\n   摘要：{r.get('snippet','')}"
-        for i, r in enumerate(search_results)
-    )
+def call_deepseek_generate(blind_spot: dict) -> list[dict]:
+    """直接用 DeepSeek 知识库生成平行观点推荐，无需外网搜索。"""
     user_msg = (
-        f"思维盲区：{blind_spot.get('description', '')}\n"
+        f"思维盲区描述：{blind_spot.get('description', '')}\n"
         f"缺失的视角：{blind_spot.get('missing_perspective', '')}\n\n"
-        f"以下是搜索到的内容：\n{results_text}\n\n"
-        "请筛选2-3条最适合的平行观点推荐（严格 JSON 格式）。"
+        "请根据你的知识库，推荐2-3条能补充这一视角的真实内容（文章/书籍/播客/视频）。"
+        "严格按 JSON 格式输出。"
     )
     with httpx.Client(timeout=30.0) as client:
         resp = client.post(
@@ -115,10 +85,10 @@ def call_deepseek_filter(blind_spot: dict, search_results: list[dict]) -> list[d
             json={
                 "model": DEEPSEEK_MODEL,
                 "messages": [
-                    {"role": "system", "content": FILTER_SYSTEM_PROMPT},
+                    {"role": "system", "content": GENERATE_SYSTEM_PROMPT},
                     {"role": "user", "content": user_msg},
                 ],
-                "temperature": 0.3,
+                "temperature": 0.5,
                 "response_format": {"type": "json_object"},
             },
         )
@@ -180,11 +150,7 @@ def main():
 
     total_items = 0
     for idx, blind_spot in enumerate(blind_spots[:2]):  # 最多处理2个盲区
-        query = f"{blind_spot.get('description', '')} {blind_spot.get('missing_perspective', '')} 深度分析"
-        search_results = ddg_search(query, max_results=6)
-        if not search_results:
-            continue
-        items = call_deepseek_filter(blind_spot, search_results)
+        items = call_deepseek_generate(blind_spot)
         count = write_bookshelf_items(report_id, idx, items)
         total_items += count
         time.sleep(1)  # 避免请求过快
