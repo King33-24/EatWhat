@@ -35,7 +35,7 @@ SYSTEM_PROMPT = """你是一个认知健康分析师。用户给你一批小红�
     {"topic": "话题名", "weight": 0.35, "sample_notes": ["笔记标题1", "笔记标题2"]}
   ],
   "opinion_spectrum": [
-    {"issue": "议题名", "position": "用户接收到的内容立场描述", "evidence": "具体笔记引用"}
+    {"issue": "议题名", "position": "这些内容所传达的立场倾向", "lean": "正面/负面/中立", "evidence": "具体笔记引用"}
   ],
   "blind_spots": [
     {"description": "盲区描述", "missing_perspective": "缺失的视角", "sample_count": 3}
@@ -45,9 +45,16 @@ SYSTEM_PROMPT = """你是一个认知健康分析师。用户给你一批小红�
   ]
 }
 
-要求：
+【关键规则】opinion_spectrum 分析的是"用户接触到的内容所传达的观点倾向"，不是用户的个人立场：
+- 例：用户浏览了大量对应试教育持批评态度的笔记 → lean 应为"负面"，不是"中立"
+- 例：用户浏览了大量励志备考、正向激励的笔记 → lean 应为"正面"
+- 只有当内容本身客观中立（如新闻报道、纯科普）时才标"中立"
+- 笔记标记了【高权重】（点赞/收藏）的内容，对 lean 判断影响更大
+- lean 字段只能是："正面" / "负面" / "中立" / "两极分化"
+
+其他要求：
 - interest_map: 最多5个话题，weight 之和为1.0
-- opinion_spectrum: 1-3个关键议题
+- opinion_spectrum: 1-3个有明显倾向的议题，如全部内容均客观中立可返回空数组
 - blind_spots: 1-2个最重要的盲区，description 要具体且可追溯（引用笔记数量）
 - emotion_pattern: 最多3种情绪
 - 用分析者口吻，客观描述，不做价值判断
@@ -73,18 +80,26 @@ def fetch_observations(days: int = 7) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+_WEIGHT_LABEL = {
+    "like": "【高权重·点赞】",
+    "collect": "【高权重·收藏】",
+    "comment": "【中权重·评论】",
+    "view": "",  # 普通浏览不加标记，减少噪音
+}
+
+
 def build_user_message(observations: list[dict]) -> str:
     lines = [f"以下是用户近7天的 {len(observations)} 条小红书浏览记录：\n"]
     for i, obs in enumerate(observations, 1):
-        parts = [f"{i}. 标题：{obs['title'] or '(无标题)'}"]
+        interaction = obs.get("interaction_type") or "view"
+        weight_label = _WEIGHT_LABEL.get(interaction, "")
+        parts = [f"{i}. {weight_label}标题：{obs['title'] or '(无标题)'}"]
         if obs.get("author"):
             parts.append(f"作者：{obs['author']}")
         if obs.get("content"):
             parts.append(f"内容摘要：{obs['content'][:120]}")
         if obs.get("tags"):
             parts.append(f"标签：{obs['tags']}")
-        if obs.get("interaction_type"):
-            parts.append(f"互动类型：{obs['interaction_type']}")
         lines.append("，".join(parts))
     lines.append("\n请根据以上数据生成认知体检报告（严格 JSON 格式）。")
     return "\n".join(lines)

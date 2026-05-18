@@ -175,7 +175,7 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
       {"topic": "AI", "weight": 0.45, "sample_videos": ["GPT-5 发布", "Claude 5 评测"]}
     ],
     "opinion_spectrum": [
-      {"issue": "AI 取代人工", "position": "支持", "evidence": "5 个笔记均认为 AI 将取代..."}
+      {"issue": "AI 取代人工", "position": "这些内容普遍认为 AI 将取代大量工作岗位", "lean": "负面", "evidence": "5 个笔记均传达悲观态度"}
     ],
     "blind_spots": [
       {
