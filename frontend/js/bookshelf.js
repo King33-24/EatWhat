@@ -264,9 +264,9 @@
         return;
       }
 
-      var beforeFingerprint = snapshot.fingerprint;
+      var beforeCount = snapshot.itemCount;
       refreshButton.disabled = true;
-      setStatus(statusNode, 'info', '书架刷新任务已触发，正在处理中（每 3 秒自动检查一次）…');
+      setStatus(statusNode, 'info', '正在生成推荐，预计需要 30-40 秒（每 3 秒自动检查一次）…');
       pageLog('INFO', '点击刷新书架', { before_report_id: snapshot.reportId });
 
       try {
@@ -274,8 +274,8 @@
         for (var i = 0; i < 20; i += 1) {
           await sleep(3000);
           var latest = await fetchBookshelf();
-          var latestFingerprint = createBookshelfFingerprint(latest);
-          if (latestFingerprint !== beforeFingerprint) {
+          var latestCount = normalizeItems(latest).length;
+          if (latestCount > beforeCount) {
             updateSnapshot(latest);
             renderBookshelf(latest);
             setStatus(statusNode, 'success', '书架已更新：report_id=' + (snapshot.reportId || '-') + '，共 ' + snapshot.itemCount + ' 条推荐。');

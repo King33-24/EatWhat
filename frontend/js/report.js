@@ -56,6 +56,7 @@
     var generateButton = document.getElementById('report-generate-btn');
     var interestMapNode = document.getElementById('interest-map');
     var opinionSpectrumNode = document.getElementById('opinion-spectrum');
+    var opinionSpectrumTipNode = document.getElementById('opinion-spectrum-tip');
     var blindSpotsNode = document.getElementById('blind-spots-list');
     var emotionPatternNode = document.getElementById('emotion-pattern-list');
     var state = {
@@ -81,7 +82,14 @@
     function mountChart(node) {
       node.classList.remove('eatwhat-chart-placeholder');
       node.textContent = '';
-      node.style.height = '280px';
+      node.style.height = '320px';
+    }
+
+    function setOpinionTip(text) {
+      if (!opinionSpectrumTipNode) {
+        return;
+      }
+      opinionSpectrumTipNode.textContent = text;
     }
 
     function renderInterestMap(items) {
@@ -109,7 +117,8 @@
           {
             name: '兴趣权重',
             type: 'pie',
-            radius: ['40%', '70%'],
+            center: ['50%', '40%'],
+            radius: ['35%', '60%'],
             itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
             label: { formatter: '{b}: {d}%' },
             data: items.map(function (item) {
@@ -121,11 +130,17 @@
           }
         ]
       });
+      setTimeout(function () {
+        if (interestMapChart) {
+          interestMapChart.resize();
+        }
+      }, 100);
     }
 
     function renderOpinionSpectrum(items) {
       if (!global.echarts) {
         markChartPlaceholder(opinionSpectrumNode, 'ECharts 未加载，无法绘制观点光谱。');
+        setOpinionTip('图表库未加载。');
         return;
       }
       if (!Array.isArray(items) || items.length === 0) {
@@ -134,8 +149,32 @@
           opinionSpectrumChart = null;
         }
         markChartPlaceholder(opinionSpectrumNode, '暂无观点光谱数据');
+        setOpinionTip('暂无可分析的观点项。');
         return;
       }
+
+      var rows = items.map(function (item) {
+        return {
+          issue: String(item.issue || '未命名议题'),
+          value: normalizePositionValue(item.position)
+        };
+      });
+      var nonNeutralCount = rows.filter(function (row) {
+        return row.value !== 0;
+      }).length;
+      if (nonNeutralCount === 0) {
+        if (opinionSpectrumChart) {
+          opinionSpectrumChart.dispose();
+          opinionSpectrumChart = null;
+        }
+        markChartPlaceholder(opinionSpectrumNode, '当前样本以中立为主，暂无明显倾向。');
+        setOpinionTip('当前全部为中立观点。');
+        return;
+      }
+
+      setOpinionTip(rows.length > nonNeutralCount
+        ? '包含 ' + (rows.length - nonNeutralCount) + ' 条中立项，已全部展示。'
+        : '当前无中立项，已展示全部观点。');
 
       mountChart(opinionSpectrumNode);
       if (!opinionSpectrumChart) {
@@ -165,8 +204,8 @@
         },
         yAxis: {
           type: 'category',
-          data: items.map(function (item) {
-            return String(item.issue || '未命名议题');
+          data: rows.map(function (row) {
+            return row.issue;
           }),
           axisLabel: {
             width: 120,
@@ -176,11 +215,11 @@
         series: [
           {
             type: 'bar',
-            data: items.map(function (item) {
+            data: rows.map(function (row) {
               return {
-                value: normalizePositionValue(item.position),
+                value: row.value,
                 itemStyle: {
-                  color: normalizePositionValue(item.position) >= 0 ? '#2d6a4f' : '#c0392b'
+                  color: row.value > 0 ? '#2d6a4f' : (row.value < 0 ? '#c0392b' : '#94a3b8')
                 }
               };
             }),
@@ -200,6 +239,11 @@
           }
         ]
       });
+      setTimeout(function () {
+        if (opinionSpectrumChart) {
+          opinionSpectrumChart.resize();
+        }
+      }, 100);
     }
 
     function renderBlindSpots(items) {
@@ -315,7 +359,7 @@
       var beforeReportId = state.reportId;
       var beforeGeneratedAt = state.generatedAt;
       generateButton.disabled = true;
-      setStatus(statusNode, 'info', '报告任务已触发，正在生成中（每 3 秒自动检查一次）…');
+      setStatus(statusNode, 'info', '分析中，预计需要 20-30 秒（每 3 秒自动检查一次）…');
       pageLog('INFO', '点击生成报告', { before_report_id: beforeReportId });
 
       try {

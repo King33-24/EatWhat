@@ -74,11 +74,8 @@
       title.className = 'text-sm font-semibold';
       title.textContent = String(item.title || '未命名链接');
 
-      var link = document.createElement('a');
-      link.className = 'link link-primary mt-1 block break-all text-sm';
-      link.href = String(item.url || '#');
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      var link = document.createElement('span');
+      link.className = 'mt-1 block break-all text-sm text-gray-400 line-through';
       link.textContent = String(item.url || '无链接');
 
       var note = document.createElement('p');
