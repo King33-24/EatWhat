@@ -175,7 +175,7 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
       {"topic": "AI", "weight": 0.45, "sample_videos": ["GPT-5 发布", "Claude 5 评测"]}
     ],
     "opinion_spectrum": [
-      {"issue": "AI 取代人工", "position": "支持", "evidence": "5 个笔记均认为 AI 将取代..."}
+      {"issue": "AI 取代人工", "position": "支持", "lean": "正面", "evidence": "5 个笔记均认为 AI 将取代..."}
     ],
     "blind_spots": [
       {
@@ -192,6 +192,12 @@ ISO 8601 含时区：`2026-05-08T20:30:00+08:00`
   "error": null
 }
 ```
+
+`opinion_spectrum` 字段说明：
+- `issue`：议题名称
+- `position`：观点描述（如“支持 / 反对 / 中立”）
+- `lean`：倾向标签，取值为 `正面` / `负面` / `中立` / `两极分化`
+- `evidence`：模型归纳该观点的证据摘要
 
 **当无报告时**：
 ```json
