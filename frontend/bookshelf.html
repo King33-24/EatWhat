@@ -34,10 +34,7 @@
             <h1 class="text-2xl font-semibold md:text-3xl">平行书架</h1>
             <p class="text-sm text-base-content/70">针对盲区推荐理性视角，解释“为什么有人会这样看问题”。</p>
           </div>
-          <button class="btn btn-outline"
-                  hx-post="/api/bookshelf/refresh"
-                  hx-target="#bookshelf-status"
-                  hx-swap="innerHTML">刷新书架</button>
+          <button id="bookshelf-refresh-btn" class="btn btn-outline">刷新书架</button>
         </div>
       </div>
     </section>
@@ -47,165 +44,14 @@
     </div>
 
     <section id="bookshelf-list" class="grid grid-cols-1 gap-4">
-      <article class="card eatwhat-card bg-base-100" data-card-id="card-1">
-        <div class="card-body gap-3">
-          <div class="flex items-center justify-between gap-2">
-            <h2 class="card-title text-lg">占位推荐条目 #1</h2>
-            <span class="badge badge-outline">article</span>
-          </div>
-          <p class="text-sm text-base-content/75">这里会显示对立或中立视角的推荐内容标题、来源类型与 URL。</p>
-          <div id="chat-context-card-1" class="rounded-md border border-[var(--eatwhat-main)]/30 bg-white/80 p-3 text-sm">
-            差异对比卡片占位：与常看内容在核心假设上的不同点会显示在这里。
-          </div>
-          <div class="rounded-md border border-base-300 bg-white/80 p-3 text-sm">
-            作者背景占位：展示作者/机构背景与研究方向，帮助用户判断可信度。
-          </div>
-          <div class="card-actions justify-end">
-            <button class="btn btn-sm eatwhat-btn-main" data-chat-toggle data-card-id="card-1">苏格拉底追问</button>
-          </div>
-          <div id="chat-panel-card-1" class="hidden rounded-md border border-base-300 bg-white/80 p-3">
-            <div id="chat-messages-card-1" class="mb-3 flex max-h-56 flex-col gap-2 overflow-y-auto text-sm"></div>
-            <form class="flex gap-2" data-chat-form data-card-id="card-1">
-              <input class="input input-bordered input-sm flex-1" name="message" placeholder="输入你想追问的问题" required>
-              <button class="btn btn-sm eatwhat-btn-main" type="submit">发送</button>
-            </form>
-          </div>
-        </div>
-      </article>
-
-      <article class="card eatwhat-card bg-base-100" data-card-id="card-2">
-        <div class="card-body gap-3">
-          <div class="flex items-center justify-between gap-2">
-            <h2 class="card-title text-lg">占位推荐条目 #2</h2>
-            <span class="badge badge-outline">podcast</span>
-          </div>
-          <p id="chat-context-card-2" class="text-sm text-base-content/75">后续将通过 `GET /api/bookshelf` 动态替换这部分内容。</p>
-          <div class="card-actions justify-end">
-            <button class="btn btn-sm eatwhat-btn-main" data-chat-toggle data-card-id="card-2">苏格拉底追问</button>
-          </div>
-          <div id="chat-panel-card-2" class="hidden rounded-md border border-base-300 bg-white/80 p-3">
-            <div id="chat-messages-card-2" class="mb-3 flex max-h-56 flex-col gap-2 overflow-y-auto text-sm"></div>
-            <form class="flex gap-2" data-chat-form data-card-id="card-2">
-              <input class="input input-bordered input-sm flex-1" name="message" placeholder="输入你想追问的问题" required>
-              <button class="btn btn-sm eatwhat-btn-main" type="submit">发送</button>
-            </form>
-          </div>
-        </div>
+      <article class="card eatwhat-card bg-base-100">
+        <div class="card-body text-sm text-base-content/70">正在加载书架内容…</div>
       </article>
     </section>
   </main>
 
   <script src="/js/api.js"></script>
   <script src="/js/logger.js"></script>
-  <script>
-    'use strict';
-
-    window.addEventListener('DOMContentLoaded', function () {
-      var chatState = {};
-
-      function getState(cardId) {
-        if (!chatState[cardId]) {
-          chatState[cardId] = {
-            sessionId: null,
-            context: ''
-          };
-        }
-        return chatState[cardId];
-      }
-
-      function appendChatMessage(cardId, role, message) {
-        var list = document.getElementById('chat-messages-' + cardId);
-        var item = document.createElement('div');
-        item.className = 'rounded-md px-3 py-2 text-sm';
-        item.style.maxWidth = '85%';
-        item.style.wordBreak = 'break-word';
-        if (role === 'user') {
-          item.style.marginLeft = 'auto';
-          item.style.backgroundColor = '#dcfce7';
-          item.style.color = '#14532d';
-          item.style.border = '1px solid #86efac';
-          item.textContent = '我：' + message;
-        } else {
-          item.style.marginRight = 'auto';
-          item.style.backgroundColor = '#eef2f7';
-          item.style.color = '#1f2937';
-          item.style.border = '1px solid #d1d5db';
-          item.textContent = '问膳：' + message;
-        }
-        list.appendChild(item);
-        list.scrollTop = list.scrollHeight;
-      }
-
-      function resetCardChat(cardId) {
-        var list = document.getElementById('chat-messages-' + cardId);
-        var contextNode = document.getElementById('chat-context-' + cardId);
-        var state = getState(cardId);
-        state.sessionId = null;
-        state.context = contextNode ? contextNode.textContent.trim() : '';
-        list.innerHTML = '';
-        appendChatMessage(cardId, 'assistant', '你好，我会基于这张卡片继续追问你。');
-      }
-
-      async function sendChat(cardId, message) {
-        var state = getState(cardId);
-        var body = {
-          message: message,
-          session_id: state.sessionId
-        };
-        if (state.context && !state.sessionId) {
-          body.context = state.context;
-        }
-        var response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-        var result = await response.json();
-        if (!response.ok || !result.success) {
-          throw new Error((result && result.error) || ('请求失败: HTTP ' + response.status));
-        }
-        state.sessionId = result.data.session_id;
-        return result.data.reply;
-      }
-
-      document.querySelectorAll('[data-chat-toggle]').forEach(function (button) {
-        button.addEventListener('click', function () {
-          var cardId = button.getAttribute('data-card-id');
-          var panel = document.getElementById('chat-panel-' + cardId);
-          var shouldOpen = panel.classList.contains('hidden');
-          panel.classList.toggle('hidden');
-          if (shouldOpen) {
-            resetCardChat(cardId);
-          }
-        });
-      });
-
-      document.querySelectorAll('[data-chat-form]').forEach(function (form) {
-        form.addEventListener('submit', async function (event) {
-          event.preventDefault();
-          var cardId = form.getAttribute('data-card-id');
-          var input = form.querySelector('input[name="message"]');
-          var text = input.value.trim();
-          if (!text) {
-            return;
-          }
-          input.value = '';
-          appendChatMessage(cardId, 'user', text);
-          try {
-            var reply = await sendChat(cardId, text);
-            appendChatMessage(cardId, 'assistant', reply);
-          } catch (error) {
-            appendChatMessage(cardId, 'assistant', '请求失败：' + error.message);
-          }
-        });
-      });
-
-      if (window.EatWhat && window.EatWhat.logger) {
-        window.EatWhat.logger.log('frontend', 'INFO', '进入平行书架页', { page: '/bookshelf.html' });
-      }
-    });
-  </script>
+  <script src="/js/bookshelf.js"></script>
 </body>
 </html>
