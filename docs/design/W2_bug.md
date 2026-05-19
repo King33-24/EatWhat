@@ -1,3 +1,4 @@
+PART 1
 需要 F同学处理的问题
   
   ① 图表首次加载空白（必改）
@@ -37,3 +38,71 @@
   ⑥ 观点倾向光谱不够直观（优化）
   "中立"偏多是数据问题，UI 上可以把光谱改成水平条形图（横向对比
   更清晰），或只显示非中立的条目。
+
+
+PART 2
+1. 给 F同学的新需求：opinion_spectrum 每条数据新增了 lean 字段，值为
+  "正面" / "负面" / "中立" / "两极分化"。建议在光谱图中用颜色区分：
+
+  ┌──────────┬────────────────┐
+  │ lean 值  │    建议颜色    │
+  ├──────────┼────────────────┤
+  │ 正面     │ 绿色 #2d6a4f   │
+  ├──────────┼────────────────┤
+  │ 负面     │ 红色 #c0392b   │
+  ├──────────┼────────────────┤
+  │ 中立     │ 灰色 #888      │
+  ├──────────┼────────────────┤
+  │ 两极分化 │ 渐变色或双色条 │
+  └──────────┴────────────────┘
+
+  条形图比饼图更直观——每个 issue 一行，左边显示 issue
+  名，右边显示带颜色的 lean 标签 + position
+  描述，比光谱的圆点更一目了然。
+
+2. 对于显示报告已生成时兴趣地图仍然是空的，但是复制标签页后新页面  
+  会有图表的问题：找到根本原因了。mountChart() 设置 height = '320px'，但紧接着就同步调用
+   echarts.init()，此时浏览器还没来得及完成 layout reflow，ECharts
+  读到容器宽度是 0，画布就是空的。新标签页能显示是因为打开时 DOM
+  已经稳定了。
+
+  给 F同学的精确修改：
+
+  report.js 第109-137行（renderInterestMap 函数），把 mountChart
+  之后的初始化包进 requestAnimationFrame：
+
+  改前（第109-137行）：
+  mountChart(interestMapNode);
+  if (!interestMapChart) {
+    interestMapChart = global.echarts.init(interestMapNode);
+  }
+  interestMapChart.setOption({
+    // ...
+  });
+  setTimeout(function () {
+    if (interestMapChart) {
+      interestMapChart.resize();
+    }
+  }, 100);
+
+  改后：
+  mountChart(interestMapNode);
+  requestAnimationFrame(function () {
+    if (!interestMapChart) {
+      interestMapChart = global.echarts.init(interestMapNode);
+    }
+    interestMapChart.setOption({
+      // 这里保持原来的 setOption 内容不变，原样复制过来
+    });
+    setTimeout(function () {
+      if (interestMapChart) {
+        interestMapChart.resize();
+      }
+    }, 100);
+  });
+  
+  renderOpinionSpectrum 也要做完全相同的修改——把 echarts.init 和
+  setOption 那段也包进 requestAnimationFrame。
+
+  原理：requestAnimationFrame 确保回调在浏览器下一次绘制前执行，此时
+  height: 320px 已经完成 layout，ECharts 能读到正确的宽高。
