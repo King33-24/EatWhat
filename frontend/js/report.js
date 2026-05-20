@@ -172,14 +172,16 @@
       }
 
       var renderTick = interestMapRenderTick;
+      if (interestMapChart) {
+        interestMapChart.dispose();
+        interestMapChart = null;
+      }
       mountChart(interestMapNode);
       requestAnimationFrame(function () {
         if (renderTick !== interestMapRenderTick) {
           return;
         }
-        if (!interestMapChart) {
-          interestMapChart = global.echarts.init(interestMapNode);
-        }
+        interestMapChart = global.echarts.init(interestMapNode);
         interestMapChart.setOption({
           tooltip: { trigger: 'item' },
           legend: { bottom: 0 },
@@ -210,123 +212,66 @@
 
     function renderOpinionSpectrum(items) {
       opinionSpectrumRenderTick += 1;
-      if (!global.echarts) {
-        markChartPlaceholder(opinionSpectrumNode, 'ECharts 未加载，无法绘制观点光谱。');
-        setOpinionTip('图表库未加载。');
-        return;
+      if (opinionSpectrumChart) {
+        opinionSpectrumChart.dispose();
+        opinionSpectrumChart = null;
       }
+      opinionSpectrumNode.classList.remove('eatwhat-chart-placeholder');
+      opinionSpectrumNode.style.height = '';
+      opinionSpectrumNode.textContent = '';
+
       if (!Array.isArray(items) || items.length === 0) {
-        if (opinionSpectrumChart) {
-          opinionSpectrumChart.dispose();
-          opinionSpectrumChart = null;
-        }
-        markChartPlaceholder(opinionSpectrumNode, '暂无观点光谱数据');
-        setOpinionTip('暂无可分析的观点项。');
+        markChartPlaceholder(opinionSpectrumNode, '暂无观点倾向数据');
+        setOpinionTip('');
         return;
       }
 
-      var rows = items.map(function (item) {
-        var rawValue = normalizePositionValue(item.position);
-        var lean = normalizeLeanValue(item.lean) || inferLeanFromPosition(item.position);
-        var chartValue = rawValue;
-        if (lean === '两极分化' && chartValue === 0) {
-          chartValue = 0.2;
-        }
-        return {
-          issue: String(item.issue || '未命名议题'),
-          value: chartValue,
-          lean: lean,
-          positionText: formatPositionText(item.position, rawValue)
-        };
+      var leanValues = items.map(function (item) {
+        return normalizeLeanValue(item.lean) || inferLeanFromPosition(item.position) || '中立';
+      });
+      var leanStyleMap = {
+        '正面': { bg: '#f0faf4', border: '#2d6a4f', badge: '#2d6a4f', text: '正面 ↑' },
+        '负面': { bg: '#fff5f5', border: '#c0392b', badge: '#c0392b', text: '负面 ↓' },
+        '两极分化': { bg: '#fffbeb', border: '#b7791f', badge: '#b7791f', text: '两极分化' },
+        '中立': { bg: '#f9f9f9', border: '#aaa', badge: '#888', text: '中立' }
+      };
+
+      items.forEach(function (item, index) {
+        var lean = leanValues[index];
+        var style = leanStyleMap[lean] || leanStyleMap['中立'];
+
+        var card = document.createElement('div');
+        card.style.cssText = 'background:' + style.bg + ';border:1px solid ' + style.border + ';border-radius:8px;padding:12px 16px;margin-bottom:10px;';
+
+        var header = document.createElement('div');
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;';
+
+        var issue = document.createElement('span');
+        issue.style.cssText = 'font-weight:600;font-size:14px;';
+        issue.textContent = String(item.issue || '未命名议题');
+
+        var badge = document.createElement('span');
+        badge.style.cssText = 'font-size:12px;padding:2px 8px;border-radius:99px;background:' + style.badge + ';color:#fff;white-space:nowrap;';
+        badge.textContent = style.text;
+
+        header.appendChild(issue);
+        header.appendChild(badge);
+
+        var position = document.createElement('p');
+        position.style.cssText = 'font-size:13px;color:#555;margin:0;line-height:1.5;';
+        position.textContent = String(item.position || '');
+
+        card.appendChild(header);
+        card.appendChild(position);
+        opinionSpectrumNode.appendChild(card);
       });
 
-      var neutralCount = rows.filter(function (row) {
-        return row.lean === '中立';
+      var neutralCount = leanValues.filter(function (lean) {
+        return lean === '中立';
       }).length;
       setOpinionTip(neutralCount > 0
-        ? '已按倾向着色展示全部议题，其中 ' + neutralCount + ' 条为中立。'
-        : '已按倾向着色展示全部议题。');
-
-      var renderTick = opinionSpectrumRenderTick;
-      mountChart(opinionSpectrumNode);
-      requestAnimationFrame(function () {
-        if (renderTick !== opinionSpectrumRenderTick) {
-          return;
-        }
-        if (!opinionSpectrumChart) {
-          opinionSpectrumChart = global.echarts.init(opinionSpectrumNode);
-        }
-        opinionSpectrumChart.setOption({
-          tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'shadow' },
-            formatter: function (params) {
-              if (!Array.isArray(params) || params.length === 0) {
-                return '';
-              }
-              var row = params[0].data || {};
-              return params[0].name + '<br>倾向：' + String(row.lean || '中立') + '<br>描述：' + String(row.positionText || '中立');
-            }
-          },
-          grid: { left: 24, right: 20, top: 16, bottom: 24, containLabel: true },
-          xAxis: {
-            type: 'value',
-            min: -1,
-            max: 1,
-            axisLabel: {
-              formatter: function (value) {
-                if (value === 1) {
-                  return '支持';
-                }
-                if (value === -1) {
-                  return '反对';
-                }
-                return '中立';
-              }
-            }
-          },
-          yAxis: {
-            type: 'category',
-            data: rows.map(function (row) {
-              return row.issue;
-            }),
-            axisLabel: {
-              width: 120,
-              overflow: 'truncate'
-            }
-          },
-          series: [
-            {
-              type: 'bar',
-              data: rows.map(function (row) {
-                return {
-                  value: row.value,
-                  lean: row.lean,
-                  positionText: row.positionText,
-                  itemStyle: {
-                    color: getLeanColor(row.lean)
-                  }
-                };
-              }),
-              label: {
-                show: true,
-                formatter: function (params) {
-                  var row = params.data || {};
-                  return '【' + String(row.lean || '中立') + '】' + String(row.positionText || '中立');
-                },
-                position: function (params) {
-                  return params.value < 0 ? 'left' : 'right';
-                }
-              }
-            }
-          ]
-        });
-        setTimeout(function () {
-          if (opinionSpectrumChart) {
-            opinionSpectrumChart.resize();
-          }
-        }, 100);
-      });
+        ? '共 ' + items.length + ' 个议题，其中 ' + neutralCount + ' 个内容客观中立'
+        : '共 ' + items.length + ' 个议题');
     }
 
     function renderBlindSpots(items) {
