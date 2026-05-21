@@ -145,12 +145,19 @@
         clearInterval(countdownTimer);
       }
       countdownTimer = setInterval(function () {
+        var shouldRefresh = false;
         document.querySelectorAll('[data-remaining-seconds]').forEach(function (node) {
           var current = Number(node.getAttribute('data-remaining-seconds')) || 0;
           var next = Math.max(0, current - 1);
           node.setAttribute('data-remaining-seconds', String(next));
           node.textContent = next > 0 ? '剩余：' + formatRemaining(next) : '已到解锁时间，等待状态刷新…';
+          if (current > 0 && next === 0) {
+            shouldRefresh = true;
+          }
         });
+        if (shouldRefresh) {
+          loadCooldown();
+        }
       }, 1000);
     }
 
