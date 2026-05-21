@@ -35,7 +35,7 @@ SYSTEM_PROMPT = """你是一个认知健康分析师。用户给你一批小红�
     {"topic": "话题名", "weight": 0.35, "sample_notes": ["笔记标题1", "笔记标题2"]}
   ],
   "opinion_spectrum": [
-    {"issue": "议题名", "position": "这些内容所传达的立场倾向", "lean": "正面/负面/中立", "evidence": "具体笔记引用"}
+    {"issue": "议题名", "position": "这些内容所传达的立场倾向", "lean": "正面/负面/中立", "weight": 0.6, "evidence": "具体笔记引用"}
   ],
   "blind_spots": [
     {"description": "盲区描述", "missing_perspective": "缺失的视角", "sample_count": 3}
@@ -54,7 +54,7 @@ SYSTEM_PROMPT = """你是一个认知健康分析师。用户给你一批小红�
 
 其他要求：
 - interest_map: 最多5个话题，weight 之和为1.0
-- opinion_spectrum: 1-3个有明显倾向的议题，如全部内容均客观中立可返回空数组
+- opinion_spectrum: 1-3个有明显倾向的议题，如全部内容均客观中立可返回空数组；weight 字段为 0.0-1.0 之间的浮点数，表示该议题相关内容在本周浏览中的占比（所有议题 weight 之和不超过 1.0）
 - blind_spots: 1-2个最重要的盲区，description 要具体且可追溯（引用笔记数量）
 - emotion_pattern: 最多3种情绪
 - 用分析者口吻，客观描述，不做价值判断

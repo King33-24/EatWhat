@@ -65,13 +65,25 @@ def create_cooldown(payload: CooldownCreate, db: Session = Depends(get_db)):
 
 @router.get("")
 def list_cooldown(status: str | None = None, db: Session = Depends(get_db)):
-    """列出冷静期项 — 见 docs/api.md §4.1。"""
+    """列出冷静期项 — 见 docs/api.md §4.1。自动将到期 locked 项改为 unlocked。"""
+    now = datetime.utcnow()
+
+    # 自动解锁到期项
+    expired = (
+        db.query(CooldownItem)
+        .filter(CooldownItem.status == "locked", CooldownItem.unlock_at <= now)
+        .all()
+    )
+    for item in expired:
+        item.status = "unlocked"
+    if expired:
+        db.commit()
+
     query = db.query(CooldownItem)
     if status:
         query = query.filter(CooldownItem.status == status)
     items = query.all()
 
-    now = datetime.utcnow()
     return {
         "success": True,
         "data": [
@@ -85,7 +97,7 @@ def list_cooldown(status: str | None = None, db: Session = Depends(get_db)):
                 "status": item.status,
                 "remaining_seconds": (
                     max(0, int((item.unlock_at - now).total_seconds()))
-                    if item.status == "locked" and item.unlock_at > now
+                    if item.status == "locked"
                     else None
                 ),
             }
