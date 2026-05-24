@@ -72,29 +72,35 @@ importScripts('logger.js');
     if (info.menuItemId !== contextMenuId || !info.linkUrl) {
       return;
     }
-    try {
-      var cooldown = await postJson('/api/cooldown', {
-        url: info.linkUrl,
-        title: info.selectionText || '',
-        user_note: '来自扩展右键菜单',
-        lock_days: 7
-      });
-      if (logger) {
-        await logger.log('background', 'INFO', '右键菜单存入冷静期成功', {
-          tab_id: tab && tab.id,
-          url: info.linkUrl,
-          cooldown_id: cooldown.id
-        });
-      }
-    } catch (error) {
-      if (logger) {
-        await logger.log('background', 'ERROR', '右键菜单存入冷静期失败', {
-          tab_id: tab && tab.id,
-          url: info.linkUrl,
-          error: error.message
-        });
-      }
+    var params = ['url=' + encodeURIComponent(info.linkUrl)];
+    if (info.selectionText) {
+      params.push('title=' + encodeURIComponent(info.selectionText));
     }
+    var formUrl = chrome.runtime.getURL('cooldown_import.html') + '?' + params.join('&');
+    chrome.tabs.create(
+      {
+        url: formUrl
+      },
+      async function (createdTab) {
+        if (chrome.runtime.lastError) {
+          if (logger) {
+            await logger.log('background', 'ERROR', '右键菜单打开表单失败', {
+              tab_id: tab && tab.id,
+              url: info.linkUrl,
+              error: chrome.runtime.lastError.message
+            });
+          }
+          return;
+        }
+        if (logger) {
+          await logger.log('background', 'INFO', '已打开冷静期补充表单', {
+            tab_id: tab && tab.id,
+            url: info.linkUrl,
+            new_tab_id: createdTab && createdTab.id
+          });
+        }
+      }
+    );
   });
 
   chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EatWhat · 冷静期补录</title>
+  <style>
+    :root {
+      --eatwhat-main: #2d6a4f;
+      --eatwhat-alert: #c0392b;
+      --eatwhat-bg: #f8f9fa;
+      --eatwhat-text: #1f2937;
+      --eatwhat-border: #e5e7eb;
+    }
+
+    body {
+      margin: 0;
+      min-width: 360px;
+      background: var(--eatwhat-bg);
+      color: var(--eatwhat-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .eatwhat-wrap {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .eatwhat-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .eatwhat-subtitle {
+      margin: 0;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .eatwhat-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .eatwhat-input {
+      width: 100%;
+      border: 1px solid var(--eatwhat-border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 13px;
+      box-sizing: border-box;
+      background: #ffffff;
+      color: var(--eatwhat-text);
+    }
+
+    .eatwhat-input:focus {
+      outline: 2px solid rgba(45, 106, 79, 0.2);
+      border-color: var(--eatwhat-main);
+    }
+
+    .eatwhat-btn {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+      background: var(--eatwhat-main);
+      cursor: pointer;
+    }
+
+    .eatwhat-btn:hover {
+      background: #25583f;
+    }
+
+    .eatwhat-status {
+      min-height: 18px;
+      font-size: 12px;
+    }
+
+    .eatwhat-status-info {
+      color: #4b5563;
+    }
+
+    .eatwhat-status-success {
+      color: var(--eatwhat-main);
+    }
+
+    .eatwhat-status-error {
+      color: var(--eatwhat-alert);
+    }
+  </style>
+</head>
+<body>
+  <div class="eatwhat-wrap">
+    <h1 class="eatwhat-title">🍽️ 存入冷静期盒子</h1>
+    <p class="eatwhat-subtitle">补充标题与备注，方便一周后回看。</p>
+
+    <label class="eatwhat-label" for="cooldown-url">链接</label>
+    <input id="cooldown-url" class="eatwhat-input" type="url" placeholder="https://www.xiaohongshu.com/explore/..." required>
+
+    <label class="eatwhat-label" for="cooldown-title">标题（可选）</label>
+    <input id="cooldown-title" class="eatwhat-input" type="text" placeholder="未命名链接">
+
+    <label class="eatwhat-label" for="cooldown-note">备注（可选）</label>
+    <textarea id="cooldown-note" class="eatwhat-input" rows="3" placeholder="为什么想看？"></textarea>
+
+    <label class="eatwhat-label" for="cooldown-days">锁定天数</label>
+    <input id="cooldown-days" class="eatwhat-input" type="number" min="1" max="30" value="7">
+
+    <button id="cooldown-submit" class="eatwhat-btn" type="button">存入冷静期</button>
+    <p id="status" class="eatwhat-status eatwhat-status-info">等待提交</p>
+  </div>
+
+  <script src="logger.js"></script>
+  <script src="cooldown_import.js"></script>
+</body>
+</html>
