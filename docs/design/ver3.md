@@ -37,6 +37,11 @@
   - **新增 §13 提交物清单**
   - **§11 比赛要求**从"待补"改为完整版
   - 文件结构调整:历史归档(ver1, update1, contest_rules)放入 `docs/design/`,新增 `.github/copilot-instructions.md`
+- **v5**(2026-05-23):**对齐实际实现**
+  - **平行书架搜索方式**:虚拟机无外网,Bing/Serper API 不可达,`search_parallel_views` 改为完全依托 DeepSeek 自身知识库生成推荐;Prompt 增加话题强相关、来源可靠性、禁止编造 URL 等约束;§2.2、§5.3 同步更新
+  - **冷静期解锁机制**:主解锁逻辑前移至 `GET /api/cooldown` 请求时自动批量解锁,不再依赖 cron;OpenClaw `cooldown-unlock` Skill 保留作兜底;§2.3、§5.3 同步更新
+  - **架构图 §5.1**:对话框入口补充说明为 `POST /api/chat` 内嵌代理(已在 v4 末期完成,此处补文档)
+  - **数据库 Schema §6**:`reports.opinion_spectrum` 字段注释补充 `lean`(正面/负面/中立/两极分化)和 `weight`(浏览频率占比 0-1)两个字段,与 `analyze_cognition.py` 实际输出对齐
 - **v4**(2026-05-12 晚上):**数据源迁移 — B 站 → 小红书**
   - **动机**:B 站 Web 版可抓的文字信息密度不足(标题 + 简介 + 高赞评论),LLM 分析素材太少;小红书笔记正文为主信息源,文字密集,更适合做"兴趣/价值观/情绪"分析
   - **平台切换**:扩展从 `*.bilibili.com/video/*` 切到 `*.xiaohongshu.com/explore/*`,所有"视频/UP 主"语义平移为"笔记/作者"
@@ -107,7 +112,7 @@
 
 **苏格拉底式追问入口**:每条推荐下有"追问"按钮，点击展开内嵌聊天框，前端通过 `POST /api/chat` 将消息代理给 OpenClaw Agent（`socratic_dialog` Skill），无需跳转外部页面。首轮可携带该条书架卡片的对比文字作为上下文（`context` 字段）。
 
-**实现方式**:先用 Bing Search API(或 Serper.dev)实时搜索,把搜索结果作为上下文喂给 DeepSeek,让它筛选 + 总结。
+**实现方式**:直接调用 DeepSeek 自身知识库生成推荐(无需外部搜索 API)。Prompt 约束：①推荐内容必须与盲区话题直接相关；②只推荐知名书籍（有 ISBN）、知名纪录片/电影、主流学术理论或知名学者公开演讲；③ `url` 字段一律留空，禁止 LLM 编造不存在的链接。
 
 ### 2.3 ⑤ 冷静期盒子
 
@@ -117,7 +122,7 @@
 - 三种入口:① Web Dashboard 输入框;② 浏览器扩展右键菜单"存入冷静期盒子";③ 在 OpenClaw 对话里发送链接
 - 列表两栏:**锁定中**(显示倒计时)、**已解锁**(显示原始 URL)
 - 用户可写"为什么想看"的备注(一周后回看自己当时的状态)
-- 解锁机制:OpenClaw 的 cron skill 每日扫描 `unlock_at < now` 改 `status='unlocked'`
+- 解锁机制:**后端 `GET /api/cooldown` 请求时自动批量解锁**到期项(`unlock_at ≤ now` 的 locked 记录直接改为 unlocked,前端刷新列表即可看到最新状态);OpenClaw `cooldown-unlock` Skill 的 cron 保留作兜底
 
 ---
 
@@ -202,7 +207,7 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
         │   │   ├── 报告页(/report.html)             │
         │   │   ├── 平行书架页(/bookshelf.html)      │
         │   │   ├── 冷静期盒子页(/cooldown.html)     │
-        │   │   └── 对话框 (新标签页 → :18789 Dashboard)│
+        │   │   └── 对话框 (内嵌 POST /api/chat 代理)    │
         │   │                                        │
         │   └── OpenClaw Dashboard(localhost:18789)  │
         │       └─── 苏格拉底对话入口                │
@@ -244,7 +249,7 @@ OpenClaw 支持通过 Ollama 接本地模型(Llama 3.1 8B / Qwen 2.5 7B 等)。"
 |---|---|---|
 | 1 | 用户在 小红书打开视频 + 点扩展"采集" | `content.js` 抓 DOM → `background.js` → `POST :8000/ingest` → FastAPI → 写 `raw_observations` 表 |
 | 2 | 周日 23:00 / 用户点"生成报告" | OpenClaw cron / 用户消息 → `analyze_cognition` Skill → 读 `raw_observations` 近 7 天 → 调 DeepSeek V4 Flash → 写 `reports` 表 |
-| 3 | 报告生成后自动 / 用户点"刷新书架" | `search_parallel_views` Skill → 读最新 `reports.blind_spots` → Bing/Serper 搜索 + DeepSeek 筛选 → 写 `bookshelf_items` 表 |
+| 3 | 报告生成后自动 / 用户点"刷新书架" | `search_parallel_views` Skill → 读最新 `reports.blind_spots` → DeepSeek 知识库直接生成推荐 → 写 `bookshelf_items` 表 |
 | 4 | 用户访问 `/report.html` | 浏览器 → FastAPI → 读 `reports` 最新一条 → 渲染 HTML + ECharts |
 | 5 | 用户点"苏格拉底追问" | 浏览器 → `POST :8000/api/chat`（FastAPI 代理）→ `openclaw agent --local` → `socratic_dialog` Skill → DeepSeek 多轮对话 |
 | 6 | 用户存"冷静期盒子" | 扩展右键 / Web 输入框 → FastAPI → 写 `cooldown_items` 表 |
@@ -298,7 +303,7 @@ CREATE TABLE reports (
     period_start    TIMESTAMP NOT NULL,
     period_end      TIMESTAMP NOT NULL,
     interest_map    TEXT,    -- JSON: [{topic, weight, sample_notes}]
-    opinion_spectrum TEXT,   -- JSON: [{issue, position, evidence}]
+    opinion_spectrum TEXT,   -- JSON: [{issue, position, lean, weight, evidence}]  lean: 正面/负面/中立/两极分化  weight: 浏览频率占比 0-1
     blind_spots     TEXT,    -- JSON: [{description, missing_perspective, sample_count}]
     emotion_pattern TEXT,    -- JSON: [{emotion, weight, examples}]
     generated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
