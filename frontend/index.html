@@ -73,6 +73,22 @@
         </div>
       </article>
     </section>
+
+    <section class="card eatwhat-card bg-base-100">
+      <div class="card-body gap-4">
+        <div>
+          <h2 class="card-title">📝 补录笔记</h2>
+          <p class="text-sm text-base-content/70">复制小红书单条笔记链接，粘贴后补录到数据池。</p>
+        </div>
+        <form id="manual-import-form" class="flex flex-col gap-3 md:flex-row md:items-center">
+          <input id="manual-import-url" class="input input-bordered flex-1" name="url" type="url" placeholder="https://www.xiaohongshu.com/explore/64a7b3a200000000000005d" required>
+          <button class="btn eatwhat-btn-main md:w-32" type="submit">补录笔记</button>
+        </form>
+        <div id="manual-import-status" class="alert bg-[var(--eatwhat-highlight)] text-sm text-base-content/80">
+          等待补录链接。
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="/js/api.js"></script>
@@ -81,20 +97,85 @@
     'use strict';
 
     window.addEventListener('DOMContentLoaded', function () {
-      if (window.EatWhat && window.EatWhat.logger) {
-        window.EatWhat.logger.log('frontend', 'INFO', '进入 Dashboard 主页', { page: '/' });
+      var api = window.EatWhat && window.EatWhat.api;
+      var logger = window.EatWhat && window.EatWhat.logger;
+      var importForm = document.getElementById('manual-import-form');
+      var importInput = document.getElementById('manual-import-url');
+      var importStatus = document.getElementById('manual-import-status');
+
+      function pageLog(level, message, context) {
+        if (!logger) {
+          return;
+        }
+        logger.log('frontend', level, message, Object.assign({ page: '/' }, context || {}));
       }
+
+      function setImportStatus(kind, message) {
+        if (!importStatus) {
+          return;
+        }
+        importStatus.className = 'alert text-sm text-base-content/80';
+        if (kind === 'success') {
+          importStatus.classList.add('bg-[#eafaf1]');
+        } else if (kind === 'error') {
+          importStatus.classList.add('bg-[#fdecea]');
+        } else {
+          importStatus.classList.add('bg-[var(--eatwhat-highlight)]');
+        }
+        importStatus.textContent = message;
+      }
+
+      pageLog('INFO', '进入 Dashboard 主页');
 
       document.querySelectorAll('[data-track-click]').forEach(function (element) {
         element.addEventListener('click', function () {
-          if (window.EatWhat && window.EatWhat.logger) {
-            window.EatWhat.logger.log('frontend', 'INFO', '主页功能入口点击', {
-              page: '/',
-              entry: element.getAttribute('data-track-click')
-            });
-          }
+          pageLog('INFO', '主页功能入口点击', {
+            entry: element.getAttribute('data-track-click')
+          });
         });
       });
+
+      if (importForm) {
+        importForm.addEventListener('submit', async function (event) {
+          event.preventDefault();
+          if (!api) {
+            setImportStatus('error', '补录失败：EatWhat.api 不可用');
+            return;
+          }
+          var url = String(importInput && importInput.value || '').trim();
+          if (!url) {
+            setImportStatus('error', '请先粘贴小红书笔记链接');
+            return;
+          }
+          if (!/^https?:\/\/(www\.)?xiaohongshu\.com\/explore\//i.test(url)) {
+            setImportStatus('error', '仅支持 xiaohongshu.com/explore 链接');
+            pageLog('WARN', '补录链接校验失败', { url: url });
+            return;
+          }
+
+          var submitButton = importForm.querySelector('button[type="submit"]');
+          if (submitButton) {
+            submitButton.disabled = true;
+          }
+
+          setImportStatus('info', '正在补录笔记…');
+          pageLog('INFO', '提交补录笔记', { url: url });
+
+          try {
+            await api.post('/api/import-url', { url: url });
+            setImportStatus('success', '补录完成，已写入数据池。');
+            pageLog('INFO', '补录笔记成功', { url: url });
+            importForm.reset();
+          } catch (error) {
+            setImportStatus('error', '补录失败：' + error.message);
+            pageLog('ERROR', '补录笔记失败', { url: url, error: error.message });
+          } finally {
+            if (submitButton) {
+              submitButton.disabled = false;
+            }
+          }
+        });
+      }
     });
   </script>
 </body>
