@@ -1,4 +1,4 @@
-"""5 张表的 SQLAlchemy 模型。Schema 权威来源:docs/design/ver2.md §6。"""
+"""5 张表的 SQLAlchemy 模型。Schema 权威来源:docs/design/eatwhat.md §6。"""
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.sql import func
 

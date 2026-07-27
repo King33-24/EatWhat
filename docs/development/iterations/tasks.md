@@ -1,6 +1,6 @@
 # 问膳 (EatWhat) — 任务拆解与分工 v3
 
-> **本文档依据 `ver2.md` 设计文档,按 16 天初赛 + 12 天决赛节奏拆解。v3 关键变更:从"自学+实操"模式改为 vibe coding(Claude 写后端 + Copilot 写前端)。任务粒度按"AI 协作单位"重新设计。**
+> **本文档依据 `docs/design/history/docs/design/history/ver2.md` 设计文档,按 16 天初赛 + 12 天决赛节奏拆解。v3 关键变更:从"自学+实操"模式改为 vibe coding(Claude 写后端 + Copilot 写前端)。任务粒度按"AI 协作单位"重新设计。**
 
 ---
 
@@ -152,7 +152,7 @@ T3 (6/6) 决赛日:现场答辩
 - **预计**:2h
 - **怎么做**:
   1. `cd backend && python3 -m venv .venv && source .venv/bin/activate`
-  2. 让 Claude:"基于 ver2.md §6 的 schema,在 backend/ 写 main.py、database.py、models.py、config.py,5 张表的 SQLAlchemy 模型,FastAPI 启动后自动 create_all。最小可运行版本。"
+  2. 让 Claude:"基于 docs/design/history/ver2.md §6 的 schema,在 backend/ 写 main.py、database.py、models.py、config.py,5 张表的 SQLAlchemy 模型,FastAPI 启动后自动 create_all。最小可运行版本。"
   3. `pip install fastapi uvicorn sqlalchemy loguru python-dotenv`
   4. 跑 `uvicorn main:app --reload --host 0.0.0.0 --port 8000` → 访问 `localhost:8000` 看到 OK
   5. 用 DBeaver 打开 `data/eatwhat.db`,确认 5 张表存在
@@ -201,7 +201,7 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★★
 - **预计**:3h
 - **怎么做**:
-  1. 让 Copilot 按 ver2.md §7 在 `extension/` 写 `manifest.json`(Manifest V3,匹配 `*.xiaohongshu.com/video/*`)
+  1. 让 Copilot 按 docs/design/history/ver2.md §7 在 `extension/` 写 `manifest.json`(Manifest V3,匹配 `*.xiaohongshu.com/video/*`)
   2. 写 `content.js`(先放 `console.log("hello from content")`)
   3. 写 `background.js`(空骨架)
   4. 写 `popup.html` + `popup.js`(简单弹窗,一个按钮)
@@ -272,7 +272,7 @@ T3 (6/6) 决赛日:现场答辩
   4. 用 `navigator.sendBeacon('http://localhost:8000/ingest', JSON.stringify(payload))` 上报 — beacon 保证即使页面关闭也能送达
   5. Payload 含 `note_id` + `interaction_type='view'` + `dwell_seconds=Math.min(Math.round(totalActiveMs/1000), 600)`(上限 600s)
 - **验收**:在小红书笔记页停留 30 秒后切走 → DB 该 note 的 `dwell_seconds` 在 25-35 秒之间(有网络延迟容差)
-- **已知边缘情况**:人离开电脑不关页面 → `visibilitychange` 不切走时会被多计;上限 600s 截断可部分缓解;决赛 PPT 里主动提及此限制(见 ver3.md §9.X)
+- **已知边缘情况**:人离开电脑不关页面 → `visibilitychange` 不切走时会被多计;上限 600s 截断可部分缓解;决赛 PPT 里主动提及此限制(见 `docs/design/eatwhat.md` §9.X)
 
 ### O-01:写第一个 OpenClaw Skill(Hello)(5/13 ~ 5/14)
 - **谁做**:B 同学(让 Claude 写)
@@ -317,7 +317,7 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★★★
 - **预计**:8h(分散 3 天)
 - **怎么做**:
-  1. **5/15 上午**:让 Claude 帮你写 prompt 草稿(参考 ver2.md §2.1 报告四板块)
+  1. **5/15 上午**:让 Claude 帮你写 prompt 草稿(参考 docs/design/history/ver2.md §2.1 报告四板块)
   2. **5/15 下午**:在 DeepSeek Playground(<https://platform.deepseek.com/playground>)或用 curl 脚本喂 20-30 条模拟笔记数据测试 prompt,迭代到输出稳定 JSON
   3. **5/16**:把最终 prompt 嵌入 SKILL.md 的 instructions 段;Skill 工作流:读 raw_observations 近 7 天 → 调 DeepSeek → 解析 JSON → 写 reports 表
   4. **5/17**:WebChat 测试触发,看 reports 表新增记录
@@ -473,7 +473,7 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★★
 - **预计**:5h
 - **怎么做**:
-  1. 按 ver2.md §13.1 PPT 大纲做 6-8 页
+  1. 按 docs/design/history/ver2.md §13.1 PPT 大纲做 6-8 页
   2. 风格:简洁、低饱和、和 Web UI 配色一致(以浅灰 + 深绿)
   3. 让 Claude 帮你润色文案
   4. 存 `demo/eatwhat_pitch.pdf` 和 .pptx 双格式
@@ -484,7 +484,7 @@ T3 (6/6) 决赛日:现场答辩
 - **难度**:★★
 - **预计**:5h
 - **怎么做**:
-  1. 按 ver2.md §13.2 大纲写
+  1. 按 docs/design/history/ver2.md §13.2 大纲写
   2. 重点:架构图(用 [draw.io](https://app.diagrams.net) 或 [Excalidraw](https://excalidraw.com))、技术栈表、Skill prompt 设计、关键代码片段
   3. 商业化叙事直接从 `docs/design/commercialization.md` 拉简版
   4. 让 Claude 帮你审稿
@@ -570,7 +570,7 @@ T3 (6/6) 决赛日:现场答辩
 ### 后端类(给 Claude)
 ```
 我现在要实现 [接口名]。
-- 设计文档:ver2.md §X
+- 设计文档:docs/design/history/ver2.md §X
 - 接口契约:docs/api.md §X
 - 已有代码:[贴当前文件]
 - 我希望:[期望结果]
@@ -599,4 +599,4 @@ T3 (6/6) 决赛日:现场答辩
 
 ---
 
-*本文档定稿于 2026-05-08(v3),与 `ver2.md` 配套使用。任何任务变更同步更新本文档。*
+*本文档定稿于 2026-05-08(v3),与 `docs/design/history/docs/design/history/ver2.md` 配套使用。任何任务变更同步更新本文档。*

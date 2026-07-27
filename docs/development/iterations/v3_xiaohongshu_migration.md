@@ -2,7 +2,7 @@
 
 > **用途**:供 B 同学(后端)和 F 同学(前端/扩展)对齐的"改了什么/要重做哪些/哪些不用动"。
 > **变更日期**:2026-05-12
-> **权威设计**:`docs/design/ver3.md`
+> **权威设计**:`docs/design/history/ver3.md`（当前权威见 `docs/design/eatwhat.md`）
 
 ---
 
@@ -16,8 +16,8 @@ B 站 Web 版能抓的文字信息密度不足(标题 + 简介 + 弹幕 + 评论
 
 | 文件 | 改动内容 | 谁看 |
 |---|---|---|
-| `docs/design/ver3.md` | 完整权威设计文档,包含双通道采集、字段表、边缘情况 | **两人都要看** |
-| `docs/design/tasks.md` | E-01~E-04 小红书重写;新增 E-05/E-06;新增 B-04b | **两人都要看** |
+| `docs/design/history/ver3.md` | 完整 v4 数据源迁移设计文档,包含双通道采集、字段表、边缘情况 | **两人都要看** |
+| `docs/development/iterations/tasks.md` | E-01~E-04 小红书重写;新增 E-05/E-06;新增 B-04b | **两人都要看** |
 | `docs/api.md` | POST /ingest payload 字段更新;新增 POST /api/import-url | **两人都要看** |
 | `backend/models.py` | `RawObservation` 表字段更新(bvid→note_id 等) | **B 同学** |
 | `backend/main.py` | 合并队友的 router/static mount + 我们的 lifespan/DB 创建 | **B 同学** |
@@ -113,12 +113,12 @@ B 站 Web 版能抓的文字信息密度不足(标题 + 简介 + 弹幕 + 评论
 
 ## 六、已生效的变更(我这边已经做完)
 
-- ✅ `docs/design/ver3.md` 已新建,含完整字段表、双通道采集设计、边缘情况章节
-- ✅ `docs/design/migration_v3_xiaohongshu.md` 本文件已生成(就是你正在看的)
+- ✅ `docs/design/history/ver3.md` 已新建,含完整字段表、双通道采集设计、边缘情况章节
+- ✅ `docs/development/iterations/v3_xiaohongshu_migration.md` 本文件已生成(就是你正在看的)
 - ✅ `backend/models.py` 已更新字段(见上述 3.1)
 - ✅ `backend/main.py` 已合并
 - ✅ `docs/api.md` 已更新 + 新增 /import-url
-- ✅ `docs/design/tasks.md` 已更新任务列表
+- ✅ `docs/development/iterations/tasks.md` 已更新任务列表
 - ✅ 其余文件(`README.md`/`commercialization.md`/`copilot-instructions.md`/`frontend/index.html`) 已完成字面替换
 
 ---
@@ -126,13 +126,13 @@ B 站 Web 版能抓的文字信息密度不足(标题 + 简介 + 弹幕 + 评论
 ## 七、你和队友下一步动作
 
 **B 同学(你)**:
-1. 读 `docs/design/ver3.md` §2.1 + §5.4 + §9.X(10 分钟)
+1. 读 `docs/design/history/ver3.md` §2.1 + §5.4 + §9.X(10 分钟)
 2. 确认 `backend/models.py` + `backend/main.py` 合并无误(B-03 验收:看 8000 能访问 + DB 有 5 张表)
 3. 写 B-04(POST /ingest + 后端日志) — 按新字段
 4. 写 B-04b(POST /api/import-url) — 新接口
 
 **F 同学(队友)**:
-1. 读 `docs/design/ver3.md` §2.1 + §5.4(5 分钟)
+1. 读 `docs/design/history/ver3.md` §2.1 + §5.4(5 分钟)
 2. 改 `extension/manifest.json` matches(1 分钟)
 3. 重做 E-02(抓小红书 DOM) — 这是最大工作量,可能需要你的帮助确认选择器
 4. 调整 E-03 payload 字段(15 分钟)

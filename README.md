@@ -78,10 +78,13 @@ project/
 ├── demo/                   # 演示物料
 ├── docs/                   # 项目文档
 │   ├── api.md              # 接口契约 ⭐ 前后端必读
-│   └── design/             # 设计文档与历史归档
-│       ├── ver2.md         # 权威设计文档（v3）
-│       ├── tasks.md        # 任务拆解 + 时间线
-│       └── commercialization.md  # 商业化叙事草案
+│   ├── project_structure.md # 项目目录说明
+│   ├── design/             # 设计文档
+│   │   ├── eatwhat.md      # 当前权威设计文档（v4.1 赛后打磨版）
+│   │   ├── commercialization.md  # 商业化叙事草案
+│   │   └── history/        # 历史设计文档归档
+│   ├── contest/            # 比赛相关材料
+│   └── development/        # 开发过程记录（bug 追踪、迭代日志）
 └── .github/
     └── copilot-instructions.md  # Copilot 项目级规范
 ```
@@ -90,11 +93,12 @@ project/
 
 | 想做什么 | 看这个 |
 |---|---|
-| 理解项目设计 | [`docs/design/ver2.md`](docs/design/ver2.md) |
-| 开始写代码 | [`docs/design/tasks.md`](docs/design/tasks.md) |
+| 理解项目设计 | [`docs/design/eatwhat.md`](docs/design/eatwhat.md) |
+| 查看项目目录说明 | [`docs/project_structure.md`](docs/project_structure.md) |
+| 追踪 bug | [`docs/development/bug_tracker.md`](docs/development/bug_tracker.md) |
 | 前后端对齐接口 | [`docs/api.md`](docs/api.md) |
 | 商业化叙事（PPT 用） | [`docs/design/commercialization.md`](docs/design/commercialization.md) |
-| 比赛规则原图 | [`docs/design/contest_rules.jpg`](docs/design/contest_rules.jpg) |
+| 比赛规则原图 | [`docs/contest/contest_rules.jpg`](docs/contest/contest_rules.jpg) |
 
 ## 协作约定
 

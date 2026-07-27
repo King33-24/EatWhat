@@ -1,7 +1,7 @@
 # GitHub Copilot 项目级规范 — EatWhat (问膳)
 
 > 本文件由 GitHub Copilot 在 VS Code 中自动读取并遵守。修改后无需重启 VS Code，下一次补全即生效。
-> 详细设计参见 `docs/design/ver2.md`。
+> 详细设计参见 `docs/design/eatwhat.md`。
 
 ---
 
