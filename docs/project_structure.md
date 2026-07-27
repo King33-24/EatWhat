@@ -18,7 +18,6 @@
 | `extension/` | Chrome 浏览器扩展（Manifest V3）| F 同学 |
 | `openclaw_workspace/` | OpenClaw Agent 人格（SOUL.md）与 Skills | B 同学 |
 | `data/` | 运行期数据（gitignored）：SQLite 数据库、日志 | 运行时生成 |
-| `demo/` | 演示物料：截图、视频占位 | 双方 |
 | `docs/` | 项目文档（见下文）| 双方 |
 
 ---
@@ -108,9 +107,9 @@
 | `project_structure.md` | 项目目录说明（本文档）|
 | `design/` | 设计文档 |
 | `design/eatwhat.md` | **当前权威设计文档**（v4.1 赛后打磨版）|
-| `design/commercialization.md` | 商业化叙事草案 |
 | `design/history/` | 历史设计文档归档（ver1/ver2/ver3/update1.txt）|
 | `contest/` | 比赛相关材料 |
+| `contest/commercialization.md` | 商业化叙事草案 |
 | `contest/contest_rules.jpg` | 比赛规则原图 |
 | `contest/tech_report_draft.md` | 初赛提交技术报告书 |
 | `contest/finals_presentation_guide.md` | 决赛答辩指南 |
@@ -131,15 +130,6 @@
 | `logs/` | 各端运行时日志 |
 
 **注意**：该目录不会进入 Git，换机器/重装时需要重新生成。
-
----
-
-## `demo/` — 演示物料
-
-| 文件/目录 | 用途 |
-|---|---|
-| `screenshots/` | 产品截图占位（目前仅 `.gitkeep`）|
-| `*.mp4` / `*.mov` | 演示视频（gitignored，太大，只放网盘）|
 
 ---
 

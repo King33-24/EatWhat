@@ -33,7 +33,7 @@
   - 团队改用 vibe coding 模式(Claude 写后端 + Copilot 写前端),去掉自学环节
   - **前端栈调整**:原生 HTML+JS+Tailwind+Chart.js → HTML+**HTMX**+Tailwind+**DaisyUI**+**ECharts**(无构建工具,AI 写更顺手,UI 更精致)
   - **比赛信息确认**:选赛道 2「智能体应用」;初赛 2026-05-24 截止,决赛 2026-06-06
-  - **新增 §12 商业化潜力**(草案见 `docs/design/commercialization.md`)
+  - **新增 §12 商业化潜力**(草案见 `docs/contest/commercialization.md`)
   - **新增 §13 提交物清单**
   - **§11 比赛要求**从"待补"改为完整版
   - 文件结构调整:历史归档(ver1, update1, contest_rules)放入 `docs/design/`,新增 `.github/copilot-instructions.md`
@@ -532,7 +532,7 @@ CREATE TABLE logs (
 
 ## 12. 商业化潜力(草案)
 
-完整草案见 [`docs/design/commercialization.md`](commercialization.md)。
+完整草案见 [`docs/contest/commercialization.md`](../../contest/commercialization.md)。
 
 **简版核心**(用于初赛技术报告书):
 
@@ -545,7 +545,7 @@ CREATE TABLE logs (
   - 远期 数据洞察服务
 - **推广路径**:小红书知识区 KOL → 内容自传播 → 学校渠道 → 跨界 app 联推
 
-> 答辩 PPT 时,根据 `docs/design/commercialization.md` 的完整版做 1-2 页。
+> 答辩 PPT 时,根据 `docs/contest/commercialization.md` 的完整版做 1-2 页。
 
 ---
 

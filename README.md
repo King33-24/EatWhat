@@ -75,13 +75,11 @@ project/
 ├── extension/              # 浏览器扩展 (Manifest V3)
 ├── openclaw_workspace/     # OpenClaw Agent + Skills
 ├── data/                   # 运行期数据（gitignore）
-├── demo/                   # 演示物料
 ├── docs/                   # 项目文档
 │   ├── api.md              # 接口契约 ⭐ 前后端必读
 │   ├── project_structure.md # 项目目录说明
 │   ├── design/             # 设计文档
 │   │   ├── eatwhat.md      # 当前权威设计文档（v4.1 赛后打磨版）
-│   │   ├── commercialization.md  # 商业化叙事草案
 │   │   └── history/        # 历史设计文档归档
 │   ├── contest/            # 比赛相关材料
 │   └── development/        # 开发过程记录（bug 追踪、迭代日志）
@@ -97,7 +95,7 @@ project/
 | 查看项目目录说明 | [`docs/project_structure.md`](docs/project_structure.md) |
 | 追踪 bug | [`docs/development/bug_tracker.md`](docs/development/bug_tracker.md) |
 | 前后端对齐接口 | [`docs/api.md`](docs/api.md) |
-| 商业化叙事（PPT 用） | [`docs/design/commercialization.md`](docs/design/commercialization.md) |
+| 商业化叙事（PPT 用） | [`docs/contest/commercialization.md`](docs/contest/commercialization.md) |
 | 比赛规则原图 | [`docs/contest/contest_rules.jpg`](docs/contest/contest_rules.jpg) |
 
 ## 协作约定

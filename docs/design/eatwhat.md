@@ -33,7 +33,7 @@
   - 团队改用 vibe coding 模式(Claude 写后端 + Copilot 写前端),去掉自学环节
   - **前端栈调整**:原生 HTML+JS+Tailwind+Chart.js → HTML+**HTMX**+Tailwind+**DaisyUI**+**ECharts**(无构建工具,AI 写更顺手,UI 更精致)
   - **比赛信息确认**:选赛道 2「智能体应用」;初赛 2026-05-24 截止,决赛 2026-06-06
-  - **新增 §12 商业化潜力**(草案见 `docs/design/commercialization.md`)
+  - **新增 §12 商业化潜力**(草案见 `docs/contest/commercialization.md`)
   - **新增 §13 提交物清单**
   - **§11 比赛要求**从"待补"改为完整版
   - 文件结构调整:历史归档(ver1, update1, contest_rules)放入 `docs/design/`,新增 `.github/copilot-instructions.md`
@@ -369,7 +369,6 @@ CREATE TABLE logs (
 │   ├── deployment.md               # 部署/运行说明(后续补)
 │   ├── design/                     # 设计文档
 │   │   ├── eatwhat.md              # 当前权威设计文档(v4.1 赛后打磨版)
-│   │   ├── commercialization.md    # 商业化叙事草案
 │   │   └── history/                # 历史设计文档归档
 │   │       ├── ver1.md             # 历史归档:初稿
 │   │       ├── ver2.md             # 历史归档:v2/v3 设计
@@ -377,11 +376,14 @@ CREATE TABLE logs (
 │   │       └── update1.txt         # 历史归档:初次澄清
 │   ├── contest/                    # 比赛相关材料(赛后整理)
 │   │   ├── contest_rules.jpg       # 比赛规则原图
+│   │   ├── tech_report_draft.md    # 初赛技术报告书
+│   │   ├── commercialization.md    # 商业化叙事草案
 │   │   ├── finals_presentation_guide.md  # 决赛答辩指南
 │   │   ├── poster_prompt.md        # 宣传海报生成提示词
 │   │   └── tech_primer.md          # 技术速览/评委应对手册
 │   └── development/                # 开发过程记录(赛后整理)
 │       ├── bug_tracker.md          # 统一 bug 追踪器
+│       ├── copilot_bug_handling_prompt.md  # Copilot bug 处理提示词
 │       └── iterations/             # 迭代日志/迁移指南
 │           ├── tasks.md            # 任务拆解 + 前后端分工(v3)
 │           ├── v3_xiaohongshu_migration.md
@@ -399,9 +401,11 @@ CREATE TABLE logs (
 │   ├── routers/
 │   │   ├── __init__.py
 │   │   ├── ingest.py               # POST /ingest
+│   │   ├── import_url.py           # POST /api/import-url
 │   │   ├── report.py               # GET/POST /api/report/*
 │   │   ├── bookshelf.py            # GET/POST /api/bookshelf/*
 │   │   ├── cooldown.py             # CRUD /api/cooldown
+│   │   ├── chat.py                 # POST /api/chat
 │   │   └── logs.py                 # POST /api/log
 │   └── tests/                      # 简单接口测试(可选)
 │
@@ -426,31 +430,33 @@ CREATE TABLE logs (
 │   ├── content.js                  # 注入 小红书笔记页抓 DOM
 │   ├── popup.html                  # 点扩展图标弹出
 │   ├── popup.js
+│   ├── cooldown_import.html        # 冷静期导入弹窗
+│   ├── cooldown_import.js
 │   ├── logger.js                   # 扩展日志封装
 │   └── icons/                      # 16/32/48/128 px
 │
 ├── openclaw_workspace/             # OpenClaw Agent 工作区(用户主负责)
 │   ├── SOUL.md                     # Agent 人格 / 任务总指令
 │   └── skills/
-│       ├── analyze_cognition/
+│       ├── analyze-cognition/      # 连字符命名(赛后整理)
 │       │   ├── SKILL.md
-│       │   └── (脚本)
-│       ├── search_parallel_views/
+│       │   └── scripts/
+│       ├── search-parallel-views/
 │       │   ├── SKILL.md
-│       │   └── (脚本)
-│       ├── socratic_dialog/
+│       │   └── scripts/
+│       ├── socratic-dialog/
 │       │   └── SKILL.md
-│       └── cooldown_unlock/
-│           └── SKILL.md
+│       └── cooldown-unlock/
+│           ├── SKILL.md
+│           └── scripts/
 │
 ├── data/                           # 运行期数据(git ignore)
 │   ├── eatwhat.db                    # SQLite 数据库
 │   └── logs/                       # loguru 文件日志
 │
-└── demo/                           # 演示物料
-    ├── seed_data.sql               # 预制 demo 数据(注入即得报告)
-    ├── screenshots/
-    └── demo_video.mp4              # (git ignore,太大)
+└── archive/                        # 历史归档(赛后新增)
+    └── backup_20260514/            # 2026-05-14 旧扩展备份
+        └── extension/
 ```
 
 ---
@@ -553,7 +559,7 @@ CREATE TABLE logs (
 
 ## 12. 商业化潜力(草案)
 
-完整草案见 [`docs/design/commercialization.md`](commercialization.md)。
+完整草案见 [`docs/contest/commercialization.md`](../contest/commercialization.md)。
 
 **简版核心**(用于初赛技术报告书):
 
@@ -566,7 +572,7 @@ CREATE TABLE logs (
   - 远期 数据洞察服务
 - **推广路径**:小红书知识区 KOL → 内容自传播 → 学校渠道 → 跨界 app 联推
 
-> 答辩 PPT 时,根据 `docs/design/commercialization.md` 的完整版做 1-2 页。
+> 答辩 PPT 时,根据 `docs/contest/commercialization.md` 的完整版做 1-2 页。
 
 ---
 
@@ -574,10 +580,10 @@ CREATE TABLE logs (
 
 | # | 内容 | 负责 | 文件位置 / 说明 |
 |---|---|---|---|
-| 1 | 应用展示 **PPT** 或 **demo 视频** | 双方共建 | `demo/eatwhat_pitch.pdf` 或 `demo/eatwhat_demo.mp4` |
-| 2 | **技术报告书** | 双方共建 | `demo/tech_report.pdf`,含架构图、技术选型、关键代码片段、商业化叙事 |
+| 1 | 应用展示 **PPT** 或 **demo 视频** | 双方共建 | 本地/夸克网盘：`eatwhat_pitch.pdf` 或 `eatwhat_demo.mp4`（不放入 Git）|
+| 2 | **技术报告书** | 双方共建 | `docs/contest/tech_report_draft.md` 为底稿，导出 PDF 后本地/夸克网盘提交 |
 | 3 | 完整可运行代码(含 README) | 双方 | git push 到 GitHub + 打包 zip |
-| 4 | Demo 数据 + 演示截图 | 双方 | `demo/seed_data.sql`、`demo/screenshots/` |
+| 4 | Demo 数据 + 演示截图 | 双方 | 本地/夸克网盘：`seed_data.sql`、`screenshots/`（不放入 Git）|
 | 5 | 上传**夸克网盘** → 提交网盘链接 | 用户 | 含上述 4 项打包 |
 
 ### 13.1 PPT 大纲(6-8 页)

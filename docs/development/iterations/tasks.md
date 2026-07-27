@@ -486,7 +486,7 @@ T3 (6/6) 决赛日:现场答辩
 - **怎么做**:
   1. 按 docs/design/history/ver2.md §13.2 大纲写
   2. 重点:架构图(用 [draw.io](https://app.diagrams.net) 或 [Excalidraw](https://excalidraw.com))、技术栈表、Skill prompt 设计、关键代码片段
-  3. 商业化叙事直接从 `docs/design/commercialization.md` 拉简版
+  3. 商业化叙事直接从 `docs/contest/commercialization.md` 拉简版
   4. 让 Claude 帮你审稿
   5. 存 `demo/tech_report.pdf`(同时存 .docx 备份)
 - **验收**:文档完整、技术细节准、商业化叙事自洽

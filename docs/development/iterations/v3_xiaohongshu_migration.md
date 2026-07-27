@@ -21,7 +21,7 @@ B 站 Web 版能抓的文字信息密度不足(标题 + 简介 + 弹幕 + 评论
 | `docs/api.md` | POST /ingest payload 字段更新;新增 POST /api/import-url | **两人都要看** |
 | `backend/models.py` | `RawObservation` 表字段更新(bvid→note_id 等) | **B 同学** |
 | `backend/main.py` | 合并队友的 router/static mount + 我们的 lifespan/DB 创建 | **B 同学** |
-| `docs/design/commercialization.md` | "B 站"→"小红书"少量替换 | 选看 |
+| `docs/contest/commercialization.md` | "B 站"→"小红书"少量替换 | 选看 |
 | `README.md` | "B 站"→"小红书"少量替换 | 选看 |
 | `.github/copilot-instructions.md` | "B 站"→"小红书"少量替换 | F 同学看 |
 | `frontend/index.html` | "B 站"→"小红书"少量替换 | F 同学看 |

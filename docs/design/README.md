@@ -9,7 +9,7 @@
 | 文件 | 用途 |
 |---|---|
 | [`eatwhat.md`](eatwhat.md) | **当前权威设计文档**。包含项目理念、MVP 功能、技术栈、架构、数据库 Schema、比赛要求、商业化简版、提交物清单等。任何后续开发都以此为准。 |
-| [`commercialization.md`](commercialization.md) | 商业化潜力分析草案，用于技术报告书和答辩 PPT。 |
+| [`../contest/commercialization.md`](../contest/commercialization.md) | 商业化潜力分析草案，已移至 contest/ 目录，用于技术报告书和答辩 PPT。 |
 | [`history/`](history/) | 历史设计文档归档，包括 ver1、ver2、ver3、update1.txt。 |
 
 ---

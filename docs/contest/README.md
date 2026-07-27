@@ -10,6 +10,7 @@
 |---|---|
 | [`contest_rules.jpg`](contest_rules.jpg) | 比赛规则原图（赛道、评分维度、时间节点、提交物要求）。 |
 | [`tech_report_draft.md`](tech_report_draft.md) | 初赛提交的技术报告书完整版。 |
+| [`commercialization.md`](commercialization.md) | 商业化潜力分析草案，用于技术报告书和答辩 PPT。 |
 | [`finals_presentation_guide.md`](finals_presentation_guide.md) | 决赛答辩指南：PPT prompt、逐页演讲稿、演示脚本、Q&A、当天清单。 |
 | [`poster_prompt.md`](poster_prompt.md) | 宣传海报 AI 生成提示词（含中英文版）。 |
 | [`tech_primer.md`](tech_primer.md) | 技术速览 / 评委提问应对手册，用比喻解释每个技术选择。 |
